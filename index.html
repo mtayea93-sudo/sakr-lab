@@ -195,6 +195,10 @@ footer h4{color:#fff;margin-bottom:.8rem;font-size:1.05rem}
 #toast{position:fixed;bottom:1.5rem;right:50%;transform:translate(50%,120px);background:var(--blue-deep);color:#fff;padding:.85rem 1.6rem;border-radius:12px;font-weight:800;box-shadow:0 15px 40px rgba(0,0,0,.3);transition:.35s;z-index:600;max-width:90%}
 #toast.show{transform:translate(50%,0)}
 #toast.err{background:#c62828}
+.notif-drop{display:none;position:fixed;top:64px;left:1rem;background:#fff;border-radius:14px;box-shadow:0 15px 40px rgba(0,0,0,.22);padding:1rem;width:min(340px,92vw);z-index:120;max-height:70vh;overflow:auto}
+.notif-drop.open{display:block;box-shadow:0 20px 50px rgba(0,0,0,.25);animation:dropIn .2s ease}
+.notif-item{padding:.5rem 0;border-bottom:1px solid #eef4f8;font-size:.9rem}
+@keyframes dropIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 
 /* WOW */
 .preloader{position:fixed;inset:0;background:linear-gradient(135deg,#083f6b,#0b5e9c);display:grid;place-items:center;z-index:999;transition:opacity .6s,visibility .6s;animation:preHide .6s ease 4s forwards}
@@ -219,6 +223,18 @@ footer h4{color:#fff;margin-bottom:.8rem;font-size:1.05rem}
 .tilt{transition:transform .18s ease;transform-style:preserve-3d;will-change:transform}
 #toTop{position:fixed;bottom:1.4rem;left:1.4rem;width:48px;height:48px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 10px 25px rgba(255,152,0,.4);opacity:0;pointer-events:none;transition:.3s;z-index:80}
 #toTop.show{opacity:1;pointer-events:auto}
+
+.chat-fab{position:fixed;bottom:1.4rem;right:1.2rem;z-index:96;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;font-size:1.4rem;cursor:pointer;box-shadow:0 12px 30px rgba(21,135,214,.45);transition:.2s}
+.chat-fab:hover{transform:scale(1.08)}
+.chat-badge{position:absolute;top:-4px;left:-4px;background:#e53935;color:#fff;font-size:.68rem;border-radius:50%;min-width:19px;height:19px;line-height:19px;text-align:center;font-weight:900;padding:0 3px}
+.chat-panel{position:fixed;bottom:5.6rem;right:1.2rem;width:min(350px,92vw);height:min(480px,72vh);background:#fff;border-radius:18px;box-shadow:0 25px 60px rgba(0,0,0,.3);z-index:97;display:none;flex-direction:column;overflow:hidden}
+.chat-panel.open{display:flex;animation:dropIn .2s ease}
+.chat-head{background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));color:#fff;padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center}
+.chat-msgs{flex:1;overflow:auto;padding:1rem;background:#f4f9fd}
+.chat-bubble{max-width:80%;padding:.5rem .8rem;border-radius:14px;margin-bottom:.5rem;font-size:.9rem;line-height:1.5}
+.chat-mine{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;margin-inline-start:auto;border-bottom-left-radius:4px}
+.chat-theirs{background:#fff;border:1px solid #e0ecf4;border-bottom-right-radius:4px}
+.chat-time{font-size:.66rem;opacity:.75;margin-top:.15rem}
 
 @media(max-width:900px){
   .hero-grid{grid-template-columns:1fr;text-align:center}
@@ -267,10 +283,11 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a href="#prices">قائمة الأسعار</a>
       <a href="#results">استلام النتائج</a>
       <a href="#contact">تواصل معنا</a>
+      <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62828;font-weight:900">📢 للشكاوى</a>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center">
       <button id="installBtn" class="btn btn-orange btn-sm" style="display:none" onclick="doInstall()">📲 حمّل التطبيق</button>
-      <button id="bellBtn" class="btn btn-ghost btn-sm" style="display:none;position:relative" onclick="toggleNotifs()">🔔<span id="bellCount" style="display:none;position:absolute;top:-7px;left:-7px;background:#e53935;color:#fff;font-size:.68rem;border-radius:50%;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px;font-weight:900"></span></button>
+      <button id="bellBtn" class="btn btn-ghost btn-sm" style="display:none;position:relative" onclick="toggleNotifs(event)">🔔<span id="bellCount" style="display:none;position:absolute;top:-7px;left:-7px;background:#e53935;color:#fff;font-size:.68rem;border-radius:50%;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px;font-weight:900"></span></button>
       <div id="userBadge" onclick="logout()"></div>
       <button class="btn btn-blue btn-sm" id="navAuthBtn" onclick="openAuth()">تسجيل الدخول</button>
       <button class="btn btn-orange btn-sm" id="navMenuBtn" onclick="var m=document.getElementById('mobileMenu');m.style.display=m.style.display==='flex'?'none':'flex'">☰</button>
@@ -284,6 +301,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <a href="#prices">قائمة الأسعار</a>
     <a href="#results">استلام النتائج</a>
     <a href="#contact">تواصل معنا</a>
+    <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62823;font-weight:900">📢 للشكاوى</a>
   </div>
 </nav>
 
@@ -520,6 +538,20 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
   <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.4)" onclick="hideInstall()">✕</button>
 </div>
 <div id="notifDrop" class="notif-drop"></div>
+<button id="chatFab" class="chat-fab" onclick="toggleChat()">💬<span id="chatBadge" class="chat-badge" style="display:none"></span></button>
+<div id="chatPanel" class="chat-panel">
+  <div class="chat-head"><b>💬 تحدث معنا — فريق المعمل</b><button onclick="closeChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:8px;cursor:pointer;font-weight:900">✕</button></div>
+  <div id="chatMsgs" class="chat-msgs"></div>
+  <div id="chatLoginBox" style="padding:.8rem;border-top:1px solid #e0ecf4">
+    <input id="chName" placeholder="اسمك" style="margin-bottom:.4rem">
+    <input id="chPhone" placeholder="رقم التليفون (01xxxxxxxxx)" style="margin-bottom:.4rem">
+    <button class="btn btn-blue btn-sm" style="width:100%" onclick="chatStart()">ابدأ المحادثة</button>
+  </div>
+  <div style="display:flex;gap:.4rem;padding:.7rem;border-top:1px solid #e0ecf4">
+    <input id="chatInput" placeholder="اكتب رسالتك هنا..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-orange btn-sm" onclick="sendChat()">إرسال</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- ===== Admin Dashboard (Full Screen) ===== -->
@@ -528,7 +560,8 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <b>⚙️ لوحة تحكم معامل صقر</b>
     <div style="display:flex;gap:.6rem;align-items:center">
       <span id="dashWho" class="hint" style="color:#cfe7f7"></span>
-      <button class="btn btn-ghost btn-sm" onclick="closeDash()">✕ إغلاق اللوحة</button>
+      <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.4)" onclick="dashLogout()">🚪 خروج</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeDash()">✕ إغلاق</button>
     </div>
   </div>
 
@@ -595,7 +628,7 @@ function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
-    ['users','bookings','prices','results','settings','site','devices'].forEach(k=>{
+    ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(k=>{
       FB.db.ref('sakr/'+k).on('value',s=>{
         const v=s.val();const vs=JSON.stringify(v==null?null:v);const cur=localStorage.getItem('sakr_'+k);
         if(vs!==cur){if(v==null)localStorage.removeItem('sakr_'+k);else localStorage.setItem('sakr_'+k,vs);refreshAll()}
@@ -649,6 +682,11 @@ let dashSession=(()=>{try{return JSON.parse(sessionStorage.getItem('sakr_dash'))
 localStorage.removeItem('sakr_dashSession');
 let bkImgData=null;
 let chosenTests={};
+let chats=DBL.get('chats',[]);
+let stats=DBL.get('stats',{visits:0,logins:0,signups:0});
+let activity=DBL.get('activity',[]);
+let chatThread=null;
+if(!sessionStorage.getItem('sakr_visited')){try{stats.visits++;DBL.set('stats',stats)}catch(e){}sessionStorage.setItem('sakr_visited','1')}
 
 /* ================= Helpers ================= */
 function toast(msg,err){const t=document.getElementById('toast');t.textContent=msg;t.className=err?'show err':'show';setTimeout(()=>t.classList.remove('show'),2800)}
@@ -658,7 +696,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function normPhone(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0020'))d=d.slice(4);if(d.startsWith('01')&&d.length===11)d='2'+d;return d}
 function waLink(phone,msg){return 'https://wa.me/'+normPhone(phone)+'?text='+encodeURIComponent(msg)}
 function compressImage(file,maxDim,q){return new Promise(res=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q))};img.src=e.target.result};r.readAsDataURL(file)})}
-function refreshAll(){applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(dashSession&&document.getElementById('dash').classList.contains('open'))renderDash()}
+function refreshAll(){applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}if(dashSession&&document.getElementById('dash').classList.contains('open'))renderDash()}
 
 /* ================= Site Content ================= */
 function renderSite(){
@@ -711,6 +749,7 @@ function doRegister(){
   if(p1!==p2)return toast('كلمتي المرور غير متطابقتين',true);
   if(users.some(u=>u.phone===phone))return toast('الرقم ده مسجل قبل كده، سجل دخولك',true);
   users.push({name,phone,addr,pass:p1,role:'customer',perms:[],active:true});
+  stats.signups++;DBL.set('stats',stats);logAct('🆕 عميل جديد سجل: '+name+' ('+phone+')');
   DBL.set('users',users);
   session=phone;DBL.set('session',session);
   closeModal('authModal');renderAuth();toast('أهلاً بيك '+name+'! حسابك اتعمل بنجاح');
@@ -718,6 +757,7 @@ function doRegister(){
 function doLogin(){
   const u=users.find(x=>x.phone===liPhone.value.trim()&&x.pass===liPass.value&&x.active!==false);
   if(!u)return toast('رقم التليفون أو كلمة المرور غلط',true);
+  stats.logins++;DBL.set('stats',stats);logAct('\uD83D\uDD11 '+u.name+' سجل دخول للموقع');
   session=u.phone;DBL.set('session',session);
   closeModal('authModal');renderAuth();toast('أهلاً بيك تاني يا '+u.name);
 }
@@ -739,19 +779,22 @@ function renderBell(){
   const bc=document.getElementById('bellCount');
   bc.textContent=unread;bc.style.display=unread?'inline-block':'none';
 }
-function toggleNotifs(){
+function toggleNotifs(ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
   const d=document.getElementById('notifDrop');
-  if(d.style.display==='block'){d.style.display='none';return}
+  if(!d)return;
+  if(d.classList.contains('open')){d.classList.remove('open');return}
   const arr=(DBL.get('notifs',{})[session])||[];
   localStorage.setItem('sakr_seen_'+session,Date.now());renderBell();
-  d.innerHTML='<div style="font-weight:900;color:var(--blue-dark);margin-bottom:.5rem">🔔 الإشعارات</div>'+
-    (arr.length?arr.slice(0,10).map(n=>'<div class="notif-item">'+esc(n.msg)+'<br><span class="hint">'+new Date(n.ts).toLocaleString('ar-EG')+'</span></div>').join(''):'<p class="hint">لا توجد إشعارات حتى الآن</p>')+
+  d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><b style="color:var(--blue-dark)">🔔 الإشعارات</b><button onclick="closeNotifs()" style="background:#f0f4f8;border:none;width:26px;height:26px;border-radius:8px;cursor:pointer;font-weight:900">✕</button></div>'+
+    (arr.length?arr.slice(0,10).map(n=>'<div class="notif-item">'+esc(n.msg)+'<br><span class="hint">'+new Date(n.ts).toLocaleString('ar-EG')+'</span></div>').join(''):'<p class="hint" style="text-align:center;padding:.6rem 0">🔕 لا توجد إشعارات حتى الآن — هتوصلك هنا لما يتم اعتماد طلبك أو جهزت نتيجتك</p>')+
     '<button class="btn btn-orange btn-sm" style="width:100%;margin-top:.5rem" onclick="enablePush()">⚡ فعّل الإشعارات الفورية (توصل حتى والموقع مقفول)</button>';
-  d.style.display='block';
+  d.classList.add('open');
 }
+function closeNotifs(){const d=document.getElementById('notifDrop');if(d)d.classList.remove('open')}
 document.addEventListener('click',e=>{
   const d=document.getElementById('notifDrop');
-  if(d&&d.style.display==='block'&&!e.target.closest('#notifDrop')&&!e.target.closest('#bellBtn'))d.style.display='none';
+  if(d&&d.classList.contains('open')&&!e.target.closest('#notifDrop')&&!e.target.closest('#bellBtn'))d.classList.remove('open');
 });
 /* ===== تثبيت التطبيق (PWA) ===== */
 let deferredPrompt=null;
@@ -794,7 +837,7 @@ function renderAuth(){
     document.getElementById('bookingFormWrap').style.display='none';
     document.getElementById('myBookingsWrap').style.display='none';
   }
-  renderBell();
+  renderBell();chatFabBadge();
 }
 
 /* ================= Booking ================= */
@@ -818,6 +861,7 @@ function submitBooking(){
   const hadImg=!!bkImgData;
   bookings.push({id:Date.now(),userPhone:u.phone,name:u.name,addr:u.addr,date,time,tests:tests||'(صورة روشتة مرفوعة)',notes,img:bkImgData,status:'pending',fileNo:null,patientFile:pf||null,createdAt:new Date().toLocaleString('ar-EG')});
   DBL.set('bookings',bookings);
+  logAct('\uD83D\uDCCB طلب حجز جديد من '+u.name+' بتاريخ '+date);
   bkTests.value='';bkNotes.value='';bkTime.value='';bkDate.value='';document.getElementById('bkFile').value='';clearBkImg();
   renderMyBookings();toast('طلبك اتبعت! هنراجعه ونأكدلك على واتساب برقم ملفك');
   /* إشعار فوري لواتساب المعمل بطلب الحجز الجديد */
@@ -920,10 +964,12 @@ const PERMS=[
   {k:'P_BOOK',l:'📋 اعتماد سحب'},{k:'P_RES',l:'📄 رفع نتايج'},
   {k:'P_PRICE',l:'💰 قائمة الأسعار'},{k:'P_DEV',l:'🖥️ الأجهزة'},
   {k:'P_USER',l:'👥 المستخدمين'},{k:'P_CONTENT',l:'📝 محتوى الموقع'},
-  {k:'P_SET',l:'⚙️ الإعدادات'}
+  {k:'P_SET',l:'⚙️ الإعدادات'},{k:'P_CHAT',l:'💬 المحادثات'}
 ];
 const TABS=[
   {k:'overview',l:'📊 نظرة عامة',p:null},
+  {k:'activity',l:'📈 التقارير والنشاط',p:'__M__'},
+  {k:'chats',l:'💬 المحادثات',p:'P_CHAT'},
   {k:'bookings',l:'📋 اعتماد سحب',p:'P_BOOK'},
   {k:'results',l:'📄 رفع نتيجة',p:'P_RES'},
   {k:'prices',l:'💰 الأسعار',p:'P_PRICE'},
@@ -968,11 +1014,12 @@ function renderDash(){
   if(!can(TABS.find(t=>t.k===activeTab).p)){activeTab='overview'}
   const who=isMaster()?'المدير':(dashUser()?dashUser().name:'');
   document.getElementById('dashWho').textContent='مسجل كـ: '+who;
+  const unChats=chats.filter(x=>x.from==='customer'&&!x.rs).length;
   document.getElementById('dashSide').innerHTML=TABS.filter(t=>can(t.p)).map(t=>
-    '<button class="'+(t.k===activeTab?'active':'')+'" onclick="switchTab(\''+t.k+'\')">'+t.l+'</button>'
+    '<button class="'+(t.k===activeTab?'active':'')+'" onclick="switchTab(\''+t.k+'\')">'+t.l+(t.k==='chats'&&unChats?' <span class="badge b-wait">'+unChats+'</span>':'')+'</button>'
   ).join('')+'<button onclick="dashLogout()" style="color:#c62828;margin-top:1rem">🚪 خروج من اللوحة</button>';
   const c=document.getElementById('dashContent');
-  const views={overview:vOverview,bookings:vBookings,results:vResults,prices:vPrices,devices:vDevices,users:vUsers,customers:vCustomers,content:vContent,settings:vSettings};
+  const views={overview:vOverview,activity:vActivity,bookings:vBookings,chats:vChats,results:vResults,prices:vPrices,devices:vDevices,users:vUsers,customers:vCustomers,content:vContent,settings:vSettings};
   (views[activeTab]||vOverview)(c);
 }
 function switchTab(k){activeTab=k;renderDash()}
@@ -1024,6 +1071,7 @@ function approveBooking(id){
     no=prev?prev.fileNo:nextFileNo();
   }
   b.status='approved';b.fileNo=no;
+  logAct('\u2705 اعتماد الطلب '+b.fileNo+' — '+b.name);
   DBL.set('bookings',bookings);renderDash();
   pushNotif(b.userPhone,'✅ تم اعتماد طلب الزيارة بتاريخ '+b.date+' — رقم ملفك: '+b.fileNo);
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
@@ -1064,6 +1112,7 @@ async function addResult(){
   entries.push({data,name,type,date:new Date().toLocaleString('ar-EG'),addedAt:Date.now()});
   results[no]={entries};
   DBL.set('results',results);
+  logAct('\uD83D\uDCC4 نتيجة مرفوعة للملف '+no);
   const b=bookings.find(x=>x.fileNo===no);
   adFileNo.value='';document.getElementById('resFileUp').value='';renderDash();
   toast('النتيجة اترفعت — بعت إشعار واتساب للعميل');
@@ -1288,6 +1337,92 @@ function saveSettings(){
   DBL.set('settings',settings);applySettings();toast('تم حفظ الإعدادات ✅');
 }
 
+/* ================= Activity Log + Live Chat ================= */
+function logAct(msg){activity.unshift({ts:Date.now(),msg});activity=activity.slice(0,100);DBL.set('activity',activity);const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open')&&activeTab==='activity')renderDash()}
+function vActivity(c){
+  const files=bookings.filter(b=>b.fileNo).length;
+  const st=(v,l)=>'<div class="admin-stat"><b>'+v+'</b><span>'+l+'</span></div>';
+  c.innerHTML='<div class="admin-stats">'+
+  st(stats.visits,'زيارة للموقع')+st(stats.signups,'حساب جديد')+st(stats.logins,'تسجيل دخول')+
+  st(bookings.length,'طلب سحب')+st(files,'حالة برقم ملف')+
+  st(users.filter(u=>u.role!=='staff').length,'عميل مسجل')+st(users.filter(u=>u.role==='staff').length,'موظف')+
+  st(chats.filter(x=>x.from==='customer').length,'رسالة واردة')+'</div>'+
+  '<div class="dash-card"><h3>📜 سجل النشاط (آخر 50 حدث) — بيتحدث لحظياً</h3>'+
+  (activity.length?activity.slice(0,50).map(a=>'<div class="notif-item"><span class="hint">'+new Date(a.ts).toLocaleString('ar-EG')+'</span><br>'+esc(a.msg)+'</div>').join(''):'<p class="hint">لا يوجد نشاط بعد</p>')+'</div>';
+}
+/* ----- Live chat (customer side) ----- */
+function myChatId(){
+  const u=currentUser();
+  if(u)return{name:u.name,phone:u.phone};
+  try{return JSON.parse(localStorage.getItem('sakr_chat_id'))}catch(e){return null}
+}
+function toggleChat(){
+  const p=document.getElementById('chatPanel');
+  if(p.classList.contains('open')){p.classList.remove('open');return}
+  p.classList.add('open');
+  const id=myChatId();
+  document.getElementById('chatLoginBox').style.display=id?'none':'block';
+  renderChat();markCustRead();
+}
+function closeChat(){const p=document.getElementById('chatPanel');if(p)p.classList.remove('open')}
+function chatStart(){
+  const n=document.getElementById('chName').value.trim(),p=document.getElementById('chPhone').value.trim();
+  if(!n||!/^01[0-9]{9}$/.test(p))return toast('اكتب اسمك ورقم تليفون صحيح (11 رقم يبدأ بـ 01)',true);
+  localStorage.setItem('sakr_chat_id',JSON.stringify({name:n,phone:p}));
+  document.getElementById('chatLoginBox').style.display='none';renderChat();
+}
+function sendChat(){
+  const id=myChatId();if(!id)return;
+  const inp=document.getElementById('chatInput');const m=inp.value.trim();if(!m)return;
+  chats.push({id:Date.now(),from:'customer',phone:id.phone,name:id.name,msg:m,ts:Date.now(),rs:false,rc:true});
+  chats=chats.slice(-300);DBL.set('chats',chats);inp.value='';
+  logAct('💬 رسالة جديدة من '+id.name+' ('+id.phone+')');
+  renderChat();chatFabBadge();toast('📨 وصلت رسالتك — هنرد عليك في أقرب وقت');
+}
+function renderChat(){
+  const box=document.getElementById('chatMsgs');if(!box)return;
+  const id=myChatId();
+  if(!id){box.innerHTML='<p class="hint" style="text-align:center;padding-top:1rem">اكتب اسمك ورقمك تحت وابدأ المحادثة 👇</p>';return}
+  const mine=chats.filter(c=>c.phone===id.phone);
+  box.innerHTML=mine.length?mine.map(c=>'<div class="chat-bubble '+(c.from==='customer'?'chat-mine':'chat-theirs')+'">'+esc(c.msg)+'<div class="chat-time">'+new Date(c.ts).toLocaleString('ar-EG')+'</div></div>').join(''):'<p class="hint" style="text-align:center;padding-top:1rem">👋 أهلاً بيك! اكتب استفسارك وهيرد عليك فريق المعمل</p>';
+  box.scrollTop=box.scrollHeight;
+}
+function markCustRead(){
+  const id=myChatId();if(!id)return;let ch=false;
+  chats.forEach(c=>{if(c.phone===id.phone&&c.from==='staff'&&!c.rc){c.rc=true;ch=true}});
+  if(ch)DBL.set('chats',chats);chatFabBadge();
+}
+function chatFabBadge(){
+  const id=myChatId();const b=document.getElementById('chatBadge');if(!b)return;
+  const n=id?chats.filter(c=>c.phone===id.phone&&c.from==='staff'&&!c.rc).length:0;
+  b.textContent=n;b.style.display=n?'inline-block':'none';
+}
+/* ----- Live chat (staff side) ----- */
+function vChats(c){
+  const phones=[];chats.forEach(x=>{if(x.from==='customer'&&phones.indexOf(x.phone)<0)phones.push(x.phone)});
+  if(chatThread){
+    const th=chats.filter(x=>x.phone===chatThread);
+    const nm=(th.find(x=>x.name)||{}).name||chatThread;
+    let ch=false;chats.forEach(x=>{if(x.phone===chatThread&&x.from==='customer'&&!x.rs){x.rs=true;ch=true}});
+    if(ch)DBL.set('chats',chats);
+    c.innerHTML='<div class="dash-card"><h3>💬 '+esc(nm)+' <span class="hint">('+esc(chatThread)+')</span> <button class="btn btn-ghost btn-sm" onclick="chatThread=null;renderDash()">← كل المحادثات</button></h3>'+
+    '<div style="max-height:50vh;overflow:auto;background:#f4f9fd;border-radius:12px;padding:1rem;margin-bottom:1rem">'+th.map(x=>'<div class="chat-bubble '+(x.from==='staff'?'chat-mine':'chat-theirs')+'">'+esc(x.msg)+'<div class="chat-time">'+new Date(x.ts).toLocaleString('ar-EG')+'</div></div>').join('')+'</div>'+
+    '<div style="display:flex;gap:.5rem"><input id="staffReply" placeholder="اكتب ردك هنا..." onkeydown="if(event.key===\'Enter\')staffSend()"><button class="btn btn-blue" onclick="staffSend()">إرسال</button></div></div>';
+    return;
+  }
+  const list=phones.map(p=>{
+    const th=chats.filter(x=>x.phone===p);const nm=(th.find(x=>x.name)||{}).name||p;
+    const un=th.filter(x=>x.from==='customer'&&!x.rs).length;const last=th[th.length-1];
+    return '<div class="dev-admin-item" style="cursor:pointer" onclick="chatThread=\''+p+'\';renderDash()"><div style="flex:1"><b>'+esc(nm)+'</b> <span class="hint">'+esc(p)+'</span>'+(un?' <span class="badge b-wait">'+un+' جديد</span>':'')+'<br><span class="hint">'+esc((last.msg||'').slice(0,60))+'</span></div><span class="hint">'+new Date(last.ts).toLocaleString('ar-EG')+'</span></div>';
+  }).join('');
+  c.innerHTML='<div class="dash-card"><h3>💬 محادثات العملاء ('+phones.length+')</h3>'+
+  (list||'<p class="hint">لا توجد محادثات — العملاء بيكلموكم من زرار "💬 تحدث معنا" العائم في الموقع</p>')+'</div>';
+}
+function staffSend(){
+  const el=document.getElementById('staffReply');const m=el.value.trim();if(!m||!chatThread)return;
+  chats.push({id:Date.now(),from:'staff',phone:chatThread,name:'إدارة المعمل',msg:m,ts:Date.now(),rs:true,rc:false});
+  DBL.set('chats',chats);renderDash();
+}
 /* ================= WOW Effects ================= */
 window.addEventListener('load',()=>setTimeout(()=>document.getElementById('preloader').classList.add('done'),1300));
 window.addEventListener('scroll',()=>{
