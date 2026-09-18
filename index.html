@@ -404,6 +404,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <div class="price-table-wrap" id="priceTableWrap" style="display:none">
         <table><thead><tr><th style="width:70%">اسم التحليل</th><th>اختار ✔</th></tr></thead><tbody id="priceTbody"></tbody></table>
       </div>
+      <p class="hint" id="priceHint" style="display:none;margin-top:.9rem;text-align:center;font-weight:800;color:var(--blue-dark)">💡 علّم ✔ على التحاليل اللي عايزها — هتظهرلك قايمة جانبية فوراً فيها التفاصيل والمجموع الكلي، ومنها تقدر تبعت طلب تسعيرة واتساب للمعمل</p>
       <div class="total-bar" id="totalBar" style="display:none">
         <h4>🧾 التحاليل المختارة وتفاصيلها</h4>
         <div id="chosenList"></div>
@@ -836,6 +837,7 @@ function renderPrices(){
   document.getElementById('stTests').textContent='+'+prices.length;
   if(!prices.length){wrap.style.display='none';empty.style.display='block';return}
   empty.style.display='none';wrap.style.display='block';
+  document.getElementById('priceHint').style.display='block';
   document.getElementById('priceTbody').innerHTML=list.length
     ? list.map((p,i)=>'<tr><td>'+esc(p.name)+'</td><td style="text-align:center"><input type="checkbox" class="pchk" data-name="'+esc(p.name)+'" data-price="'+p.price+'" '+(chosenTests[p.name]?'checked':'')+' onchange="recalcTotal()"></td></tr>').join('')
     : '<tr><td colspan="2" style="text-align:center;color:var(--muted)">لا توجد نتائج مطابقة للبحث</td></tr>';
