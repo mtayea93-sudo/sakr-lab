@@ -127,7 +127,7 @@ a.card:hover{transform:translateY(-6px);border-top-color:var(--orange)}
   .cart-panel{top:auto;bottom:0;left:0;right:0;width:100%;transform:none;border-radius:20px 20px 0 0;max-height:55vh;box-shadow:0 -15px 50px rgba(0,0,0,.4)}
   .cart-fab{bottom:4.6rem}
 }
-.total-bar h4{color:#ffc266;margin-bottom:.5rem}
+.cart-panel h4{color:#ffc266;margin-bottom:.5rem}
 .chosen-item{display:flex;justify-content:space-between;padding:.25rem 0;font-size:.92rem;border-bottom:1px dashed rgba(255,255,255,.2)}
 .grand{display:flex;justify-content:space-between;align-items:center;margin-top:.8rem;font-size:1.15rem;font-weight:900}
 .grand b{color:#ffc266;font-size:1.4rem}
@@ -405,8 +405,9 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
         <table><thead><tr><th style="width:70%">اسم التحليل</th><th>اختار ✔</th></tr></thead><tbody id="priceTbody"></tbody></table>
       </div>
       <p class="hint" id="priceHint" style="display:none;margin-top:.9rem;text-align:center;font-weight:800;color:var(--blue-dark)">💡 علّم ✔ على التحاليل اللي عايزها — هتظهرلك قايمة جانبية فوراً فيها التفاصيل والمجموع الكلي، ومنها تقدر تبعت طلب تسعيرة واتساب للمعمل</p>
-      <div class="total-bar" id="totalBar" style="display:none">
-        <h4>🧾 التحاليل المختارة وتفاصيلها</h4>
+      <button class="cart-fab" id="cartFab" style="display:none" onclick="toggleCart()">🧾 <span id="fabInfo"></span> ▲</button>
+      <div class="cart-panel" id="totalBar" style="display:none">
+        <h4>🧾 التحاليل المختارة وتفاصيلها <button onclick="document.getElementById('totalBar').style.display='none'" style="float:left;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;font-weight:900">✕</button></h4>
         <div id="chosenList"></div>
         <div class="grand"><span>المجموع الكلي</span><b id="grandTotal">0 ج.م</b></div>
         <div style="display:flex;gap:.8rem;margin-top:1rem;flex-wrap:wrap">
@@ -1011,6 +1012,7 @@ function approveBooking(id){
   }
   b.status='approved';b.fileNo=no;
   DBL.set('bookings',bookings);renderDash();
+  pushNotif(b.userPhone,'✅ تم اعتماد طلب الزيارة بتاريخ '+b.date+' — رقم ملفك: '+b.fileNo);
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
   setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank'),900);
 }
