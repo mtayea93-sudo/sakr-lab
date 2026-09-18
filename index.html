@@ -357,6 +357,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
         <div class="img-prev" id="bkImgPrev"><img id="bkImgEl" alt="الروشتة"><button onclick="clearBkImg()">✕</button></div>
         <p class="hint">بيتم رفع الصورة بأعلى جودة ممكنة تلقائياً.</p>
       </div>
+      <div class="field"><label>رقم الملف (لو عميل مستمر — اختياري)</label><input id="bkFile" placeholder="مثال: SQ-1001 — سيبه فاضي لو أول زيارة ليك"></div>
       <div class="field"><label>ملاحظات إضافية (اختياري)</label><input id="bkNotes" placeholder="أي تفاصيل تساعدنا نخدمك أحسن"></div>
       <button class="btn btn-orange" style="width:100%" onclick="submitBooking()">إرسال طلب الحجز</button>
       <p class="hint" style="margin-top:.6rem">بعد إرسال الطلب، المعمل يراجعه ويوافق عليه، وبيتم إرسال <b>رقم الملف</b> الخاص بيك على واتساب — ده الرقم اللي هتستلم بيه نتيجتك.</p>
@@ -462,7 +463,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     </div>
     <div class="signature">
       <div class="sig-social">
-        <a id="sigFb" href="#" target="_blank" title="فيسبوك">فيسبوك</a><span class="dot">✦</span><a href="https://x.com/m_tayea" target="_blank" title="إكس (تويتر)">إكس (تويتر)</a><span class="dot">✦</span><a id="sigWa" href="#" target="_blank" title="واتساب">واتساب</a>
+        <a href="https://www.facebook.com/share/1JmeK44dx1/" target="_blank" title="فيسبوك">فيسبوك</a><span class="dot">✦</span><a href="https://wa.me/201060651837" target="_blank" title="واتساب">واتساب</a>
       </div>
       <div class="sig-badge">👌 صنع بواسطة <b>m_tayea</b> <span class="handle">@m_tayea</span></div>
     </div>
@@ -554,11 +555,12 @@ const DBL={
   get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem('sakr_'+k));return v==null?d:v}catch(e){return d}},
   set:(k,v)=>{localStorage.setItem('sakr_'+k,JSON.stringify(v));if(FB.ready){try{FB.db.ref('sakr/'+k).set(v)}catch(e){}}}
 };
-const FB={ready:false,db:null};
+const FB={ready:false,db:null,connected:false};
 function initFirebase(){
   if(typeof firebase==='undefined'||!FIREBASE_CONFIG.apiKey)return;
   try{
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
+    FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
     ['users','bookings','prices','results','settings','site','devices'].forEach(k=>{
       FB.db.ref('sakr/'+k).on('value',s=>{
         const v=s.val();const vs=JSON.stringify(v==null?null:v);const cur=localStorage.getItem('sakr_'+k);
@@ -618,7 +620,6 @@ function renderSite(){
   document.getElementById('addressTxt').textContent=site.address;
   document.getElementById('mapBtn').href=site.mapLink;
   document.getElementById('fbBtn').href=site.facebook;
-  document.getElementById('sigFb').href=site.facebook;
   document.getElementById('hoursTxt').innerHTML=esc(site.hours).replace(/\n/g,'<br>');
 }
 
@@ -705,12 +706,14 @@ async function handleBkImg(input){
 function clearBkImg(){bkImgData=null;document.getElementById('bkImgPrev').style.display='none'}
 function submitBooking(){
   const u=currentUser();if(!u)return toast('سجل دخولك الأول',true);
-  const date=bkDate.value,time=bkTime.value,tests=bkTests.value.trim(),notes=bkNotes.value.trim();
-  if(!date||!time||!tests)return toast('املأ التاريخ والوقت والتحاليل المطلوبة',true);
+  const date=bkDate.value,time=bkTime.value,tests=bkTests.value.trim(),notes=bkNotes.value.trim(),pf=(document.getElementById('bkFile').value||'').trim().toUpperCase();
+  if(!date||!time)return toast('املأ التاريخ والوقت',true);
+  if(!tests&&!bkImgData)return toast('اكتب التحاليل أو ارفع صورة الروشتة — حاجة واحدة تكفي',true);
   if(date<new Date().toISOString().split('T')[0])return toast('اختار تاريخ قادم مش تاريخ فات',true);
-  bookings.push({id:Date.now(),userPhone:u.phone,name:u.name,addr:u.addr,date,time,tests,notes,img:bkImgData,status:'pending',fileNo:null,createdAt:new Date().toLocaleString('ar-EG')});
+  if(pf&&!bookings.some(b=>b.fileNo===pf))return toast('رقم الملف '+pf+' مش موجود — اتأكد منه أو سيبه فاضي',true);
+  bookings.push({id:Date.now(),userPhone:u.phone,name:u.name,addr:u.addr,date,time,tests:tests||'(صورة روشتة مرفوعة)',notes,img:bkImgData,status:'pending',fileNo:null,patientFile:pf||null,createdAt:new Date().toLocaleString('ar-EG')});
   DBL.set('bookings',bookings);
-  bkTests.value='';bkNotes.value='';bkTime.value='';bkDate.value='';clearBkImg();
+  bkTests.value='';bkNotes.value='';bkTime.value='';bkDate.value='';document.getElementById('bkFile').value='';clearBkImg();
   renderMyBookings();toast('طلبك اتبعت! هنراجعه ونأكدلك على واتساب برقم ملفك');
 }
 function renderMyBookings(){
@@ -765,16 +768,25 @@ function checkResult(){
   const out=document.getElementById('resOut');
   if(!no)return;
   if(!r){out.innerHTML='<p style="color:#c62828;font-weight:800;text-align:center">رقم الملف ده مالوش نتيجة لسه — جرب تاني بعد ما المعمل يأكدك.</p>';return}
+  let btn;
+  if(r.data)btn='<button class="btn btn-blue" onclick="openResult(\''+no+'\')">📄 عرض النتيجة ('+(r.type==='pdf'?'PDF':'صورة')+')</button>';
+  else if(r.link)btn='<a class="btn btn-blue" href="'+esc(r.link)+'" target="_blank">📄 عرض النتيجة</a>';
+  else btn='<p style="color:#c62828">بيانات النتيجة غير مكتملة</p>';
   out.innerHTML='<div style="background:#eefaf1;border:1.5px solid #b7e4c7;border-radius:12px;padding:1.2rem;text-align:center">'+
     '<div style="font-size:2rem">✅</div><b style="color:#1e8e4e">نتيجتك جاهزة!</b>'+
-    '<p style="color:var(--muted);font-size:.9rem;margin:.3rem 0 .8rem">اضغط على الزر عشان تشوف التقرير</p>'+
-    '<a class="btn btn-blue" href="'+esc(r.link)+'" target="_blank">📄 عرض النتيجة</a>'+
+    '<p style="color:var(--muted);font-size:.9rem;margin:.3rem 0 .8rem">'+(r.name?esc(r.name):'')+'</p>'+btn+
     '<p class="hint" style="margin-top:.6rem">تاريخ التجهيز: '+esc(r.date||'')+'</p></div>';
+}
+function dataUrlToBlob(d){const parts=d.split(',');const mime=(parts[0].match(/:(.*?);/)||[])[1]||'application/octet-stream';const bin=atob(parts[1]);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:mime})}
+function openResult(no){
+  const r=results[no];if(!r||!r.data)return;
+  const url=URL.createObjectURL(dataUrlToBlob(r.data));
+  window.open(url,'_blank');
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 function applySettings(){
   const waMsg=encodeURIComponent('أهلاً معامل صقر، عندي استفسار.');
   document.getElementById('waContactBtn').href='https://wa.me/'+normPhone(settings.wa)+'?text='+waMsg;
-  document.getElementById('sigWa').href='https://wa.me/'+normPhone(settings.wa);
 }
 </script>
 <script>
@@ -791,7 +803,8 @@ const TABS=[
   {k:'results',l:'📄 رفع نتيجة',p:'P_RES'},
   {k:'prices',l:'💰 الأسعار',p:'P_PRICE'},
   {k:'devices',l:'🖥️ الأجهزة',p:'P_DEV'},
-  {k:'users',l:'👥 المستخدمين',p:'P_USER'},
+  {k:'users',l:'👥 الموظفون',p:'P_USER'},
+  {k:'customers',l:'👤 العملاء',p:'P_USER'},
   {k:'content',l:'📝 محتوى الموقع',p:'P_CONTENT'},
   {k:'settings',l:'⚙️ الإعدادات',p:'P_SET'}
 ];
@@ -839,6 +852,9 @@ function renderDash(){
 function switchTab(k){activeTab=k;renderDash()}
 
 function vOverview(c){
+  var connStatus=FB.ready
+    ?(FB.connected?'متصل بـ Firebase - البيانات بتتزامن لحظياً على كل الأجهزة':'Firebase مش متصل - راجع databaseURL وقواعد Realtime Database في الكونسول')
+    :'وضع التخزين المحلي - البيانات موجودة على الجهاز ده بس';
   c.innerHTML='<div class="admin-stats">'+
   '<div class="admin-stat"><b>'+users.filter(u=>u.role!=='staff').length+'</b><span>عميل مسجل</span></div>'+
   '<div class="admin-stat"><b>'+users.filter(u=>u.role==='staff').length+'</b><span>موظف</span></div>'+
@@ -847,7 +863,7 @@ function vOverview(c){
   '<div class="admin-stat"><b>'+prices.length+'</b><span>تحليل بالقائمة</span></div>'+
   '<div class="admin-stat"><b>'+devices.length+'</b><span>جهاز معروض</span></div>'+
   '<div class="admin-stat"><b>'+Object.keys(results).length+'</b><span>نتيجة مرفوعة</span></div></div>'+
-  '<div class="dash-card"><h3>🔗 روابط سريعة</h3><p class="hint">الموقع العام: <a href="#home" onclick="closeDash()">الرئيسية</a> — لوحة التحكم دي شغالة بالتخزين المحلي'+(FB.ready?' + Firebase ☁️':' — <b style="color:#e68900">فعّل Firebase من إعدادات الكود عشان البيانات تتزامن على كل الأجهزة</b>')+'</p></div>';
+  '<div class="dash-card"><h3>حالة الاتصال</h3><p class="hint" style="font-weight:800;font-size:.95rem">'+connStatus+'</p></div>';
 }
 function nextFileNo(){
   let n=1000+bookings.filter(b=>b.fileNo).length;
@@ -871,7 +887,12 @@ function vBookings(c){
 }
 function approveBooking(id){
   const b=bookings.find(x=>x.id===id);if(!b)return;
-  b.status='approved';b.fileNo=nextFileNo();
+  let no=b.patientFile||null;
+  if(!no){
+    const prev=bookings.find(x=>x.userPhone===b.userPhone&&x.fileNo&&x.id!==b.id);
+    no=prev?prev.fileNo:nextFileNo();
+  }
+  b.status='approved';b.fileNo=no;
   DBL.set('bookings',bookings);renderDash();
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
   setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank'),900);
@@ -879,27 +900,40 @@ function approveBooking(id){
 function delBooking(id){if(!confirm('تحذف الطلب ده نهائياً؟'))return;bookings=bookings.filter(b=>b.id!==id);DBL.set('bookings',bookings);renderDash();toast('تم حذف الطلب')}
 function waNotify(phone,fileNo){
   const r=results[fileNo];
-  window.open(waLink(phone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+fileNo+
-    (r?'\nنتيجتك جاهزة! شوفها من هنا: '+r.link:'\nطلبك قيد التنفيذ، هنبلغك فوراً لما النتيجة تكون جاهزة.')),'_blank');
+  const readyMsg=r?(r.link?'\nنتيجتك جاهزة! شوفها من هنا: '+r.link:'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج" برقم ملفك'):'';
+  window.open(waLink(phone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+fileNo+readyMsg+
+    (r?'':'\nطلبك قيد التنفيذ، هنبلغك فوراً لما النتيجة تكون جاهزة.')),'_blank');
 }
 function vResults(c){
-  const rows=Object.keys(results).map(no=>'<tr><td><b>'+esc(no)+'</b></td><td><a href="'+esc(results[no].link)+'" target="_blank">'+esc(results[no].link)+'</a></td><td>'+esc(results[no].date||'')+'</td><td><button class="btn btn-danger btn-sm" onclick="delResult(\''+no+'\')">حذف</button></td></tr>').join('');
-  c.innerHTML='<div class="dash-card"><h3>📤 رفع نتيجة جديدة</h3>'+
+  const rows=Object.keys(results).map(no=>{const r=results[no];
+    const fileCell=r.link?'<a href="'+esc(r.link)+'" target="_blank">لينك</a>':esc(r.name||'ملف مرفوع')+' ('+(r.type==='pdf'?'PDF':'صورة')+')';
+    return '<tr><td><b>'+esc(no)+'</b></td><td>'+fileCell+'</td><td>'+esc(r.date||'')+'</td><td><button class="btn btn-danger btn-sm" onclick="delResult(\''+no+'\')">حذف</button></td></tr>'}).join('');
+  c.innerHTML='<div class="dash-card"><h3>📤 رفع نتيجة جديدة (ملف بدل اللينك)</h3>'+
   '<div class="grid2"><div class="field"><label>رقم الملف</label><input id="adFileNo" placeholder="SQ-1001"></div>'+
-  '<div class="field"><label>لينك النتيجة</label><input id="adLink" placeholder="https://..."></div></div>'+
-  '<button class="btn btn-blue btn-sm" onclick="addResult()">حفظ النتيجة وإرسال إشعار واتساب</button></div>'+
-  '<div class="dash-card"><h3>النتايج المرفوعة ('+Object.keys(results).length+')</h3><div class="table-wrap"><table><thead><tr><th>رقم الملف</th><th>اللينك</th><th>التاريخ</th><th></th></tr></thead><tbody>'+
+  '<div class="field"><label>ملف النتيجة (PDF أو صورة)</label><input type="file" id="resFileUp" accept="application/pdf,image/*"></div></div>'+
+  '<button class="btn btn-blue btn-sm" onclick="addResult()">💾 حفظ النتيجة وإرسال إشعار واتساب</button>'+
+  '<p class="hint" style="margin-top:.4rem">الـ PDF حد أقصاه 1.5 ميجا — والصور بتتضغط تلقائياً بأعلى جودة.</p></div>'+
+  '<div class="dash-card"><h3>النتايج المرفوعة ('+Object.keys(results).length+')</h3><div class="table-wrap"><table><thead><tr><th>رقم الملف</th><th>الملف</th><th>التاريخ</th><th></th></tr></thead><tbody>'+
   (rows||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا توجد نتايج بعد</td></tr>')+'</tbody></table></div></div>';
 }
-function addResult(){
-  const no=adFileNo.value.trim().toUpperCase(),link=adLink.value.trim();
-  if(!no||!link)return toast('اكتب رقم الملف والينك',true);
-  results[no]={link,date:new Date().toLocaleDateString('ar-EG')};
+async function addResult(){
+  const no=adFileNo.value.trim().toUpperCase();
+  const f=document.getElementById('resFileUp').files[0];
+  if(!no)return toast('اكتب رقم الملف',true);
+  if(!f)return toast('اختار ملف النتيجة (PDF أو صورة)',true);
+  let data,name,type;
+  if(f.type.startsWith('image/')){data=await compressImage(f,1800,.88);name=f.name;type='img'}
+  else if(f.type==='application/pdf'){
+    if(f.size>1.5*1024*1024)return toast('الـ PDF أكبر من 1.5 ميجا — قلل حجمه وحاول تاني',true);
+    data=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f)});
+    name=f.name;type='pdf';
+  }else return toast('الملف لازم يكون PDF أو صورة',true);
+  results[no]={data,name,type,date:new Date().toLocaleString('ar-EG')};
   DBL.set('results',results);
   const b=bookings.find(x=>x.fileNo===no);
-  adFileNo.value='';adLink.value='';renderDash();
+  adFileNo.value='';document.getElementById('resFileUp').value='';renderDash();
   toast('النتيجة اترفعت — بعت إشعار واتساب للعميل');
-  if(b)setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! شوفها من هنا: '+link),'_blank'),400);
+  if(b)setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج"'),'_blank'),400);
 }
 function delResult(no){if(!confirm('تحذف نتيجة '+no+'؟'))return;delete results[no];DBL.set('results',results);renderDash();toast('تم الحذف')}
 function vPrices(c){
@@ -985,33 +1019,88 @@ function featureDev(id){devices.forEach(d=>d.featured=(d.id===id));DBL.set('devi
 function delDev(id){if(!confirm('تحذف الجهاز ده؟'))return;devices=devices.filter(d=>d.id!==id);DBL.set('devices',devices);renderDevices();renderDash();toast('تم الحذف')}
 
 /* Users admin */
+let editUserIdx=-1;
+let editCustIdx=-1;
 function vUsers(c){
-  const rows=users.map((u,i)=>
-    '<tr><td><b>'+esc(u.name)+'</b><br><span class="hint">'+esc(u.phone)+'</span></td>'+
-    '<td>'+(u.role==='staff'?'<span class="badge b-ok">موظف</span>':'<span class="badge b-wait">عميل</span>')+'</td>'+
-    '<td style="max-width:220px">'+(u.role==='staff'?(u.perms||[]).map(p=>'<span class="badge" style="background:#e8f3fb;color:var(--blue-dark)">'+PERMS.find(x=>x.k===p).l+'</span>').join(' '):'—')+'</td>'+
+  const staff=users.map((u,i)=>({u,i})).filter(x=>x.u.role==='staff');
+  const rows=staff.map(x=>{
+    const u=x.u,i=x.i;
+    return '<tr><td><b>'+esc(u.name)+'</b><br><span class="hint">'+esc(u.phone)+'</span></td>'+
+    '<td style="max-width:240px">'+(u.perms||[]).map(p=>'<span class="badge" style="background:#e8f3fb;color:var(--blue-dark)">'+PERMS.find(z=>z.k===p).l+'</span>').join(' ')+'</td>'+
     '<td>'+(u.active!==false?'<span class="badge b-ok">نشط</span>':'<span class="badge b-off">موقوف</span>')+'</td>'+
-    '<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="toggleUser('+i+')">'+(u.active!==false?'إيقاف':'تفعيل')+'</button> <button class="btn btn-danger btn-sm" onclick="delUser('+i+')">حذف</button></td></tr>').join('');
-  c.innerHTML='<div class="dash-card"><h3>➕ إضافة مستخدم / موظف</h3>'+
+    '<td style="white-space:nowrap"><button class="btn btn-blue btn-sm" onclick="editStaff('+i+')">تعديل</button> <button class="btn btn-ghost btn-sm" onclick="toggleUser('+i+')">'+(u.active!==false?'إيقاف':'تفعيل')+'</button> <button class="btn btn-danger btn-sm" onclick="delUser('+i+')">حذف</button></td></tr>'}).join('');
+  const eu=editUserIdx>=0?users[editUserIdx]:null;
+  c.innerHTML='<div class="dash-card"><h3>'+(eu?'✏️ تعديل بيانات موظف':'➕ إضافة موظف جديد')+'</h3>'+
   '<div class="grid2">'+
-  '<div class="field"><label>الاسم</label><input id="usName"></div>'+
-  '<div class="field"><label>رقم التليفون</label><input id="usPhone" placeholder="01xxxxxxxxx"></div>'+
-  '<div class="field"><label>كلمة المرور</label><input id="usPass"></div>'+
-  '<div class="field"><label>الدور</label><select id="usRole" onchange="document.getElementById(\'permBox\').style.display=this.value===\'staff\'?\'block\':\'none\'"><option value="customer">عميل</option><option value="staff">موظف (دخول للوحة)</option></select></div></div>'+
-  '<div id="permBox" style="display:none"><label>صلاحيات الموظف:</label><div class="perm-grid">'+
-  PERMS.map(p=>'<label><input type="checkbox" class="permChk" value="'+p.k+'"> '+p.l+'</label>').join('')+'</div></div>'+
-  '<button class="btn btn-orange btn-sm" onclick="addUser()">إضافة المستخدم</button></div>'+
-  '<div class="dash-card"><h3>المستخدمون ('+users.length+')</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الدور</th><th>الصلاحيات</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
-  (rows||'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا يوجد مستخدمون</td></tr>')+'</tbody></table></div></div>';
+  '<div class="field"><label>الاسم</label><input id="usName" value="'+(eu?esc(eu.name):'')+'"></div>'+
+  '<div class="field"><label>رقم التليفون</label><input id="usPhone" placeholder="01xxxxxxxxx" value="'+(eu?esc(eu.phone):'')+'"></div>'+
+  '<div class="field"><label>كلمة المرور</label><input id="usPass" value="'+(eu?esc(eu.pass):'')+'"></div>'+
+  '<div class="field"><label>الحالة</label><select id="usActive"><option value="1" '+(!eu||eu.active!==false?'selected':'')+'>نشط</option><option value="0" '+(eu&&eu.active===false?'selected':'')+'>موقوف</option></select></div></div>'+
+  '<label>الصلاحيات:</label><div class="perm-grid">'+
+  PERMS.map(p=>'<label><input type="checkbox" class="permChk" value="'+p.k+'" '+((eu?(eu.perms||[]):[]).includes(p.k)?'checked':'')+'> '+p.l+'</label>').join('')+'</div>'+
+  '<button class="btn '+(eu?'btn-blue':'btn-orange')+' btn-sm" onclick="addUser()">'+(eu?'💾 حفظ التعديلات':'إضافة الموظف')+'</button> '+
+  (eu?'<button class="btn btn-ghost btn-sm" onclick="editUserIdx=-1;renderDash()">إلغاء</button>':'')+'</div>'+
+  '<div class="dash-card"><h3>الموظفون ('+staff.length+')</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الصلاحيات</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
+  (rows||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا يوجد موظفون</td></tr>')+'</tbody></table></div></div>';
 }
+function editStaff(i){editUserIdx=i;renderDash()}
 function addUser(){
-  const n=usName.value.trim(),p=usPhone.value.trim(),pw=usPass.value.trim(),role=usRole.value;
-  if(!n||!p||!pw)return toast('املأ الاسم والتليفون وكلمة المرور',true);
+  const n=usName.value.trim(),p=usPhone.value.trim(),pw=usPass.value.trim();
+  if(!n||!p||!pw)return toast('املأ كل البيانات',true);
   if(!/^01[0-9]{9}$/.test(p))return toast('رقم التليفون لازم يكون 11 رقم يبدأ بـ 01',true);
-  if(users.some(u=>u.phone===p))return toast('الرقم مسجل قبل كده',true);
-  const perms=role==='staff'?Array.from(document.querySelectorAll('.permChk:checked')).map(x=>x.value):[];
-  users.push({name:n,phone:p,addr:'',pass:pw,role,perms,active:true});
-  DBL.set('users',users);renderDash();toast('المستخدم اتضاف ✅');
+  const perms=Array.from(document.querySelectorAll('.permChk:checked')).map(x=>x.value);
+  const active=usActive.value==='1';
+  if(editUserIdx>=0){
+    if(users.some((x,xi)=>xi!==editUserIdx&&x.phone===p))return toast('الرقم مسجل لشخص تاني',true);
+    const u=users[editUserIdx];
+    u.name=n;u.phone=p;u.pass=pw;u.perms=perms;u.active=active;
+    editUserIdx=-1;
+  }else{
+    if(users.some(u=>u.phone===p))return toast('الرقم مسجل قبل كده',true);
+    users.push({name:n,phone:p,addr:'',pass:pw,role:'staff',perms,active});
+  }
+  DBL.set('users',users);renderDash();toast('تم الحفظ ✅');
+}
+function vCustomers(c){
+  const custs=users.map((u,i)=>({u,i})).filter(x=>x.u.role!=='staff');
+  const rows=custs.map(x=>{
+    const u=x.u,i=x.i;
+    const visits=bookings.filter(b=>b.userPhone===u.phone).sort((a,b)=>b.id-a.id);
+    const withFile=visits.find(v=>v.fileNo);
+    const fileNo=withFile?withFile.fileNo:'—';
+    const visitsRows=visits.map(v=>
+      '<div class="bk-row" style="margin-bottom:.5rem"><b>'+esc(v.date)+' — '+esc(v.time)+'</b> '+
+      (v.fileNo?'<span class="badge b-ok">'+esc(v.fileNo)+'</span>':'<span class="badge b-wait">قيد المراجعة</span>')+
+      (v.img?' <a href="'+v.img+'" target="_blank">📷 صورة الروشتة</a>':'')+
+      '<br><span class="hint">'+esc(v.tests)+'</span>'+
+      (results[v.fileNo]?' <a class="btn btn-blue btn-sm" style="margin-top:.3rem" onclick="openResult(\''+v.fileNo+'\')">📄 النتيجة</a>':'')+'</div>').join('');
+    return '<tr><td><b>'+esc(u.name)+'</b></td><td>'+esc(u.phone)+'</td><td>'+esc(u.addr||'—')+'</td>'+
+    '<td><b>'+visits.length+'</b> زيارة</td><td><b style="color:var(--orange-dark)">'+esc(fileNo)+'</b></td>'+
+    '<td style="white-space:nowrap"><button class="btn btn-blue btn-sm" onclick="editCust('+i+')">تعديل البيانات</button></td></tr>'+
+    (visits.length?'<tr><td colspan="6" style="background:#f7fbfe"><details><summary style="cursor:pointer;font-weight:800;color:var(--blue-dark)">📋 ملف الزيارات ('+visits.length+')</summary><div style="padding:.6rem">'+visitsRows+'</div></details></td></tr>':'');
+  }).join('');
+  let editForm='';
+  if(editCustIdx>=0&&users[editCustIdx]){
+    const u=users[editCustIdx];
+    editForm='<div class="dash-card" style="border:2px solid var(--orange)"><h3>✏️ تعديل بيانات العميل</h3><div class="grid2">'+
+    '<div class="field"><label>الاسم</label><input id="ctName" value="'+esc(u.name)+'"></div>'+
+    '<div class="field"><label>رقم التليفون</label><input id="ctPhone" value="'+esc(u.phone)+'"></div></div>'+
+    '<div class="field"><label>العنوان</label><input id="ctAddr" value="'+esc(u.addr||'')+'"></div>'+
+    '<button class="btn btn-blue btn-sm" onclick="saveCust()">💾 حفظ</button> <button class="btn btn-ghost btn-sm" onclick="editCustIdx=-1;renderDash()">إلغاء</button></div>';
+  }
+  c.innerHTML='<div class="dash-card"><h3>👤 العملاء ('+custs.length+')</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>الزيارات</th><th>رقم الملف</th><th></th></tr></thead><tbody>'+
+  (rows||'<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد عملاء</td></tr>')+'</tbody></table></div></div>'+editForm;
+}
+function editCust(i){editCustIdx=i;renderDash()}
+function saveCust(){
+  const u=users[editCustIdx];if(!u)return;
+  const n=ctName.value.trim(),p=ctPhone.value.trim(),a=ctAddr.value.trim();
+  if(!n||!p)return toast('الاسم والتليفون مطلوبين',true);
+  users.forEach(x=>{if(x.phone===u.phone){x.name=n;x.phone=p;x.addr=a}});
+  bookings.forEach(b=>{if(b.userPhone===u.phone){b.name=n;b.userPhone=p;b.addr=a}});
+  if(session===u.phone){session=p;DBL.set('session',session)}
+  DBL.set('users',users);DBL.set('bookings',bookings);
+  editCustIdx=-1;renderDash();renderAuth();toast('تم حفظ بيانات العميل ✅');
 }
 function toggleUser(i){users[i].active=users[i].active===false?true:false;DBL.set('users',users);renderDash();toast('تم التحديث')}
 function delUser(i){if(!confirm('تحذف '+users[i].name+' نهائياً؟'))return;users.splice(i,1);DBL.set('users',users);renderDash();toast('تم الحذف')}
@@ -1038,7 +1127,8 @@ function vSettings(c){
   '<div class="field"><label>رقم واتساب المعمل الأساسي (بكود الدولة)</label><input id="setWa" value="'+esc(settings.wa)+'" placeholder="2010xxxxxxxx"></div>'+
   '<div class="field"><label>تغيير كلمة مرور الإدارة (المدير)</label><input id="setAdminPass" placeholder="كلمة مرور جديدة"></div>'+
   '<button class="btn btn-orange btn-sm" onclick="saveSettings()">حفظ الإعدادات</button>'+
-  '<p class="hint" style="margin-top:.6rem">رقم الواتساب ده بيستقبل طلبات التسعير من الموقع. '+(FB.ready?'متصل بـ Firebase ☁️':'فعّل Firebase عشان البيانات تتزامن على كل الأجهزة — الصق الإعدادات في FIREBASE_CONFIG في كود الملف.')+'</p></div>';
+  '<p class="hint" style="margin-top:.6rem">رقم الواتساب ده بيستقبل طلبات التسعير من الموقع.</p>'+
+  (FB.ready?'':'<p class="hint" style="color:#e68900;font-weight:800">⚠️ فعّل Firebase عشان البيانات تتزامن على كل الأجهزة — الصق الإعدادات في FIREBASE_CONFIG في كود الملف.</p>')+'</div>';
 }
 function saveSettings(){
   const wa=setWa.value.trim(),p=setAdminPass.value.trim();
@@ -1107,6 +1197,5 @@ document.querySelectorAll('.stat b').forEach(el=>cntIO.observe(el));
 initFirebase();applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals();
 if(dashSession)openAdmin();
 </script>
-<script src="mtayea-signature.js"></script>
 </body>
 </html>
