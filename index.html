@@ -6,8 +6,9 @@
 <title>معامل صقر للتحاليل الطبية | حجز زيارة منزلية لسحب العينات</title>
 <meta name="description" content="معامل صقر للتحاليل الطبية - حجز زيارات منزلية لسحب العينات، معرفة أسعار التحاليل، واستلام النتائج أونلاين.">
 <link rel="icon" type="image/jpeg" href="logo.jpeg">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap"></noscript>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --blue:#1587d6; --blue-dark:#0b5e9c; --blue-deep:#083f6b;
@@ -135,6 +136,9 @@ footer a:hover{color:#ffc266}
 /* ===== WOW Effects ===== */
 .preloader{position:fixed;inset:0;background:linear-gradient(135deg,#083f6b,#0b5e9c);display:grid;place-items:center;z-index:999;transition:opacity .6s,visibility .6s}
 .preloader.done{opacity:0;visibility:hidden}
+/* حماية: إخفاء تلقائي بعد 4 ثواني حتى لو علق التحميل */
+.preloader{animation:preHide .6s ease 4s forwards}
+@keyframes preHide{to{opacity:0;visibility:hidden}}
 .preloader img{width:120px;border-radius:24px;animation:pulseLogo 1.2s ease-in-out infinite;box-shadow:0 20px 50px rgba(0,0,0,.4)}
 .preloader .load-bar{width:180px;height:5px;background:rgba(255,255,255,.2);border-radius:10px;margin-top:1.2rem;overflow:hidden}
 .preloader .load-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff9800,#ffc266);animation:load 1.3s ease forwards}
@@ -203,6 +207,14 @@ footer a:hover{color:#ffc266}
 </div>
 <div id="scrollProgress"></div>
 <button id="toTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="للأعلى">▲</button>
+<script>
+/* إخفاء شاشة التحميل: عند اكتمال التحميل أو بعد 3.5 ثانية كحد أقصى */
+(function(){
+  function hidePre(){var p=document.getElementById('preloader');if(p)p.classList.add('done')}
+  window.addEventListener('load',function(){setTimeout(hidePre,900)});
+  setTimeout(hidePre,3500);
+})();
+</script>
 
 <!-- ===== Navbar ===== -->
 <nav>
