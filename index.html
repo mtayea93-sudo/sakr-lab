@@ -630,8 +630,15 @@ function initFirebase(){
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
     ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(k=>{
       FB.db.ref('sakr/'+k).on('value',s=>{
-        const v=s.val();const vs=JSON.stringify(v==null?null:v);const cur=localStorage.getItem('sakr_'+k);
-        if(vs!==cur){if(v==null)localStorage.removeItem('sakr_'+k);else localStorage.setItem('sakr_'+k,vs);refreshAll()}
+        const v=s.val();
+        if(v==null){
+          /* السحابة فاضية: ارفع نسخة البيانات المحلية مرة واحدة (زرع أولي) — ومتمسحش المحلي أبداً */
+          const local=localStorage.getItem('sakr_'+k);
+          if(local){try{FB.db.ref('sakr/'+k).set(JSON.parse(local))}catch(e){}}
+          return;
+        }
+        const vs=JSON.stringify(v);const cur=localStorage.getItem('sakr_'+k);
+        if(vs!==cur){localStorage.setItem('sakr_'+k,vs);refreshAll()}
       });
     });
   }catch(e){FB.ready=false}
@@ -646,8 +653,8 @@ const SITE_DEFAULT={
   pricesSub:'اختار التحاليل المطلوبة وشوف المجموع الكلي — الأسعار مش بتظهر إلا بعد اختيارك',
   resultsSub:'أدخل رقم الملف اللي وصلك على واتساب لما المعمل وافق على طلبك',
   contactSub:'إحنا في خدمتك على مدار الساعة',
-  phones:['01065756591','01040271091','0503460042','01060651837'],
-  whats:['01065756591','01040271091','01060651837'],
+  phones:['01040271091','0503460042','01060651837'],
+  whats:['01040271091','01060651837'],
   address:'دكرنس - شارع المستشفى',
   mapLink:'https://maps.app.goo.gl/ScBHP8Pa4YstrwXn9?g_st=ac',
   facebook:'https://www.facebook.com/drsakrlab?mibextid=ZbWKwL',
@@ -673,8 +680,10 @@ let users=DBL.get('users',[]);
 let bookings=DBL.get('bookings',[]);
 let prices=DBL.get('prices',[]);
 let results=DBL.get('results',{});
-let settings=DBL.get('settings',{wa:'201065756591',adminPass:'sakr2026'});
+let settings=DBL.get('settings',{wa:'201060651837',adminPass:'sakr2026'});
+if(settings.wa==='201065756591'){settings.wa='201060651837';DBL.set('settings',settings)}
 let site=DBL.get('site',SITE_DEFAULT);
+if(DBL.get('siteVer',0)!==2){site.phones=SITE_DEFAULT.phones.slice();site.whats=SITE_DEFAULT.whats.slice();DBL.set('site',site);DBL.set('siteVer',2)}
 let devices=DBL.get('devices',DEVICES_DEFAULT);
 if(DBL.get('devVer',0)!==2){devices=JSON.parse(JSON.stringify(DEVICES_DEFAULT));DBL.set('devices',devices);DBL.set('devVer',2)}
 let session=DBL.get('session',null);
@@ -786,7 +795,7 @@ function toggleNotifs(ev){
   if(d.classList.contains('open')){d.classList.remove('open');return}
   const arr=(DBL.get('notifs',{})[session])||[];
   localStorage.setItem('sakr_seen_'+session,Date.now());renderBell();
-  d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><b style="color:var(--blue-dark)">🔔 الإشعارات</b><button onclick="closeNotifs()" style="background:#f0f4f8;border:none;width:26px;height:26px;border-radius:8px;cursor:pointer;font-weight:900">✕</button></div>'+
+  d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><b style="color:var(--blue-dark)">'+(session===SUP_PHONE?'🔔 إشعارات النظام':'🔔 الإشعارات')+'</b><button onclick="closeNotifs()" style="background:#f0f4f8;border:none;width:26px;height:26px;border-radius:8px;cursor:pointer;font-weight:900">✕</button></div>'+
     (arr.length?arr.slice(0,10).map(n=>'<div class="notif-item">'+esc(n.msg)+'<br><span class="hint">'+new Date(n.ts).toLocaleString('ar-EG')+'</span></div>').join(''):'<p class="hint" style="text-align:center;padding:.6rem 0">🔕 لا توجد إشعارات حتى الآن — هتوصلك هنا لما يتم اعتماد طلبك أو جهزت نتيجتك</p>')+
     '<button class="btn btn-orange btn-sm" style="width:100%;margin-top:.5rem" onclick="enablePush()">⚡ فعّل الإشعارات الفورية (توصل حتى والموقع مقفول)</button>';
   d.classList.add('open');
@@ -1338,7 +1347,14 @@ function saveSettings(){
 }
 
 /* ================= Activity Log + Live Chat ================= */
-function logAct(msg){activity.unshift({ts:Date.now(),msg});activity=activity.slice(0,100);DBL.set('activity',activity);const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open')&&activeTab==='activity')renderDash()}
+const SUP_PHONE='01060651837';
+function logAct(msg){
+  activity.unshift({ts:Date.now(),msg});activity=activity.slice(0,100);DBL.set('activity',activity);
+  const nf=DBL.get('notifs',{});const arr=nf[SUP_PHONE]||[];
+  arr.unshift({msg,ts:Date.now()});nf[SUP_PHONE]=arr.slice(0,50);DBL.set('notifs',nf);
+  if(session===SUP_PHONE){renderBell();toast(msg)}
+  const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open')&&activeTab==='activity')renderDash();
+}
 function vActivity(c){
   const files=bookings.filter(b=>b.fileNo).length;
   const st=(v,l)=>'<div class="admin-stat"><b>'+v+'</b><span>'+l+'</span></div>';
@@ -1479,6 +1495,7 @@ document.addEventListener('mouseout',e=>{
 document.getElementById('year').textContent=new Date().getFullYear();
 document.getElementById('bkImgFile').addEventListener('change',e=>handleBkImg(e.target));
 document.getElementById('bkImgCam').addEventListener('change',e=>handleBkImg(e.target));
+document.getElementById('mobileMenu').addEventListener('click',e=>{if(e.target.tagName==='A')document.getElementById('mobileMenu').style.display='none'});
 document.querySelectorAll('.stat b').forEach(el=>cntIO.observe(el));
 /* تسجيل عامل الخدمة (PWA) */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
