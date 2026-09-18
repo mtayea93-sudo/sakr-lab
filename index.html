@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>معامل صقر للتحاليل الطبية | حجز زيارة منزلية لسحب العينات</title>
+<meta name="description" content="معامل صقر للتحاليل الطبية - حجز زيارات منزلية لسحب العينات، معرفة أسعار التحاليل، واستلام النتائج أونلاين.">
+<link rel="icon" type="image/jpeg" href="logo.jpeg">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --blue:#1587d6; --blue-dark:#0b5e9c; --blue-deep:#083f6b;
+  --orange:#ff9800; --orange-dark:#e68900;
+  --bg:#f4f9fd; --text:#12324a; --muted:#5b7a90;
+  --radius:16px; --shadow:0 10px 30px rgba(11,94,156,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+img{max-width:100%}
+a{text-decoration:none;color:inherit}
+.container{width:min(1150px,92%);margin-inline:auto}
+
+/* ===== Navbar ===== */
+nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 2px 15px rgba(11,94,156,.1)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;gap:1rem}
+.brand{display:flex;align-items:center;gap:.7rem}
+.brand img{width:52px;height:52px;border-radius:12px;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.brand-name{font-weight:900;font-size:1.15rem;color:var(--blue-dark);line-height:1.2}
+.brand-name small{display:block;font-size:.72rem;color:var(--orange-dark);font-weight:700}
+.nav-links{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap}
+.nav-links a{padding:.45rem .85rem;border-radius:10px;font-weight:700;font-size:.95rem;color:var(--text);transition:.2s}
+.nav-links a:hover{background:#e8f3fb;color:var(--blue-dark)}
+.btn{display:inline-flex;align-items:center;gap:.45rem;border:none;cursor:pointer;font-family:inherit;font-weight:800;border-radius:12px;padding:.7rem 1.5rem;font-size:1rem;transition:.2s}
+.btn-blue{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;box-shadow:0 6px 18px rgba(21,135,214,.35)}
+.btn-blue:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(21,135,214,.45)}
+.btn-orange{background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;box-shadow:0 6px 18px rgba(255,152,0,.35)}
+.btn-orange:hover{transform:translateY(-2px)}
+.btn-ghost{background:#fff;border:2px solid #cfe4f2;color:var(--blue-dark)}
+.btn-ghost:hover{background:#eef7fd}
+.btn-sm{padding:.4rem .9rem;font-size:.85rem;border-radius:9px}
+.btn-danger{background:#e53935;color:#fff}
+#userBadge{display:none;align-items:center;gap:.5rem;background:#eef7fd;border:1.5px solid #bcd9ec;padding:.35rem .9rem;border-radius:11px;font-weight:800;color:var(--blue-dark);font-size:.9rem;cursor:pointer}
+
+/* ===== Hero ===== */
+.hero{background:linear-gradient(150deg,var(--blue-deep),var(--blue-dark) 45%,var(--blue));color:#fff;padding:4.2rem 0 5rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 15% 20%,rgba(255,152,0,.28),transparent 40%),radial-gradient(circle at 90% 85%,rgba(255,255,255,.12),transparent 45%)}
+.hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:2.5rem;align-items:center;position:relative}
+.hero h1{font-size:clamp(1.7rem,4vw,2.7rem);font-weight:900;line-height:1.35;margin-bottom:1rem}
+.hero h1 span{color:#ffc266}
+.hero p{font-size:1.08rem;color:#d9ecfa;margin-bottom:1.8rem;max-width:560px}
+.hero-logo{width:min(340px,80%);margin-inline:auto;border-radius:22px;box-shadow:0 25px 60px rgba(0,0,0,.35);border:6px solid rgba(255,255,255,.25)}
+.hero-btns{display:flex;gap:.8rem;flex-wrap:wrap}
+.stats{display:flex;gap:2rem;margin-top:2.6rem;flex-wrap:wrap}
+.stat b{display:block;font-size:1.6rem;color:#ffc266}
+.stat span{font-size:.85rem;color:#cfe7f7}
+
+/* ===== Sections ===== */
+section{padding:3.8rem 0}
+.sec-title{text-align:center;margin-bottom:.4rem}
+.sec-title h2{font-size:1.9rem;font-weight:900;color:var(--blue-deep)}
+.sec-title .line{width:70px;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--orange),var(--blue));margin:.7rem auto 0}
+.sec-sub{text-align:center;color:var(--muted);margin-bottom:2.4rem}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.4rem}
+.card{background:#fff;border-radius:var(--radius);padding:1.8rem 1.4rem;box-shadow:var(--shadow);text-align:center;transition:.25s;border-top:4px solid var(--blue)}
+.card:hover{transform:translateY(-6px)}
+.card.orange{border-top-color:var(--orange)}
+.card .icon{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;margin:0 auto 1rem;font-size:1.8rem;background:linear-gradient(135deg,#e8f3fb,#d2e9f8)}
+.card.orange .icon{background:linear-gradient(135deg,#fff3e0,#ffe3b3)}
+.card h3{font-size:1.15rem;margin-bottom:.5rem;color:var(--blue-dark)}
+.card p{color:var(--muted);font-size:.92rem}
+
+/* ===== Panels / forms ===== */
+.panel{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:2rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+label{display:block;font-weight:800;font-size:.9rem;margin-bottom:.35rem;color:var(--blue-deep)}
+input,select,textarea{width:100%;padding:.7rem .95rem;border:1.5px solid #cfe0ec;border-radius:11px;font-family:inherit;font-size:.95rem;background:#fbfdff;transition:.2s;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,135,214,.15)}
+.field{margin-bottom:1rem}
+.hint{font-size:.8rem;color:var(--muted)}
+.badge{display:inline-block;padding:.2rem .7rem;border-radius:20px;font-size:.78rem;font-weight:800}
+.b-wait{background:#fff3e0;color:#e68900}
+.b-ok{background:#e6f6ec;color:#1e8e4e}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{background:var(--blue-dark);color:#fff;padding:.7rem .8rem;text-align:right;font-weight:800}
+th:first-child{border-radius:0 10px 0 0}
+th:last-child{border-radius:10px 0 0 0}
+td{padding:.6rem .8rem;border-bottom:1px solid #e4eef5;text-align:right}
+tr:nth-child(even) td{background:#f7fbfe}
+
+/* Prices */
+.price-tools{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.4rem;align-items:center}
+.search-box{flex:1;min-width:220px}
+.price-table-wrap{max-height:420px;overflow:auto;border-radius:12px;border:1px solid #e0ecf4}
+.price{font-weight:900;color:var(--orange-dark);white-space:nowrap}
+
+/* Tabs */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.8rem;flex-wrap:wrap}
+.tab-btn{background:#fff;border:2px solid #cfe4f2;padding:.55rem 1.4rem;border-radius:12px;font-family:inherit;font-weight:800;color:var(--blue-dark);cursor:pointer;font-size:.95rem;transition:.2s}
+.tab-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(8,40,60,.55);display:none;place-items:center;z-index:100;padding:1rem}
+.modal.open{display:grid}
+.modal-box{background:#fff;border-radius:18px;padding:2rem;width:min(460px,100%);max-height:90vh;overflow:auto;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.3)}
+.modal-close{position:absolute;top:.8rem;left:.8rem;background:#f0f4f8;border:none;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1.1rem;color:var(--blue-dark)}
+.modal-box h3{margin-bottom:1.2rem;color:var(--blue-dark);font-size:1.3rem}
+
+/* Toast */
+#toast{position:fixed;bottom:1.5rem;right:50%;transform:translate(50%,120px);background:var(--blue-deep);color:#fff;padding:.85rem 1.6rem;border-radius:12px;font-weight:800;box-shadow:0 15px 40px rgba(0,0,0,.3);transition:.35s;z-index:200}
+#toast.show{transform:translate(50%,0)}
+#toast.err{background:#c62828}
+
+/* Footer */
+footer{background:var(--blue-deep);color:#cfe7f7;margin-top:2rem}
+.foot-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:2rem;padding:3rem 0 2rem}
+footer h4{color:#fff;margin-bottom:.8rem;font-size:1.05rem}
+footer a:hover{color:#ffc266}
+.foot-bottom{border-top:1px solid rgba(255,255,255,.15);padding:1.1rem 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;font-size:.85rem}
+.admin-link{font-size:.75rem;color:rgba(255,255,255,.45)}
+.admin-link:hover{color:#ffc266}
+.signature{text-align:center;padding:1rem 0 1.6rem;font-size:.95rem;color:#9fc6e2}
+.signature b{color:#ffc266;font-weight:900}
+
+/* Admin */
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.6rem}
+.admin-stat{background:linear-gradient(135deg,#e8f3fb,#fff);border-radius:14px;padding:1rem;text-align:center;border:1px solid #d7e9f5}
+.admin-stat b{display:block;font-size:1.5rem;color:var(--blue-dark)}
+.admin-stat span{font-size:.8rem;color:var(--muted)}
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #e0ecf4;margin-bottom:1.6rem}
+.approved-row td{background:#eefaf1 !important}
+
+@media(max-width:860px){
+  .hero-grid{grid-template-columns:1fr;text-align:center}
+  .hero p{margin-inline:auto}
+  .hero-btns,.stats{justify-content:center}
+  .grid2{grid-template-columns:1fr}
+  .foot-grid{grid-template-columns:1fr}
+  .nav-links{display:none}
+  #mobileMenu{display:flex !important}
+}
+#mobileMenu{display:none;flex-direction:column;background:#fff;padding:.8rem;border-bottom:2px solid #e3eef6}
+#mobileMenu a{padding:.6rem;font-weight:700;border-bottom:1px solid #f0f5f9}
+</style>
+</head>
+<body>
+
+<!-- ===== Navbar ===== -->
+<nav>
+  <div class="container nav-inner">
+    <a class="brand" href="#home">
+      <img src="logo.jpeg" alt="لوجو معامل صقر">
+      <div class="brand-name">معامل صقر للتحاليل الطبية<small>دقة تثق بها .. وسرعة تلاحقها</small></div>
+    </a>
+    <div class="nav-links">
+      <a href="#home">الرئيسية</a>
+      <a href="#services">خدماتنا</a>
+      <a href="#booking">حجز زيارة منزلية</a>
+      <a href="#prices">قائمة الأسعار</a>
+      <a href="#results">استلام النتائج</a>
+      <a href="#contact">تواصل معنا</a>
+    </div>
+    <div style="display:flex;gap:.6rem;align-items:center">
+      <div id="userBadge" onclick="logout()"></div>
+      <button class="btn btn-blue btn-sm" id="navAuthBtn" onclick="openAuth()">تسجيل الدخول</button>
+      <button class="btn btn-orange btn-sm" id="navMenuBtn" onclick="document.getElementById('mobileMenu').style.display=document.getElementById('mobileMenu').style.display==='flex'?'none':'flex'">☰</button>
+    </div>
+  </div>
+  <div id="mobileMenu" class="container">
+    <a href="#home">الرئيسية</a>
+    <a href="#services">خدماتنا</a>
+    <a href="#booking">حجز زيارة منزلية</a>
+    <a href="#prices">قائمة الأسعار</a>
+    <a href="#results">استلام النتائج</a>
+    <a href="#contact">تواصل معنا</a>
+  </div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<header class="hero" id="home">
+  <div class="container hero-grid">
+    <div>
+      <h1>معامل صقر للتحاليل الطبية<br><span>سحب العينات في بيتك .. ونتيجتك على واتساب</span></h1>
+      <p>احجز زيارة منزلية لسحب عينات التحاليل بكل سهولة، اعرف تكلفة التحاليل قبل ما تروح، واستلم نتيجتك أونلاين برقم الملف الخاص بيك.</p>
+      <div class="hero-btns">
+        <a href="#booking" class="btn btn-orange">احجز زيارة منزلية الآن</a>
+        <a href="#prices" class="btn btn-ghost" style="background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4)">اعرف أسعار التحاليل</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>+20</b><span>سنة خبرة</span></div>
+        <div class="stat"><b>+500</b><span>تحليل متاح</span></div>
+        <div class="stat"><b>24 ساعة</b><span>خدمة منزلية</span></div>
+      </div>
+    </div>
+    <img class="hero-logo" src="logo.jpeg" alt="معامل صقر للتحاليل الطبية">
+  </div>
+</header>
+
+<!-- ===== Services ===== -->
+<section id="services">
+  <div class="container">
+    <div class="sec-title"><h2>خدماتنا</h2><div class="line"></div></div>
+    <p class="sec-sub">كل اللي محتاجه لتحاليلك في مكان واحد</p>
+    <div class="cards">
+      <div class="card">
+        <div class="icon">🏠</div>
+        <h3>زيارة منزلية لسحب العينات</h3>
+        <p>سحب العينات في بيتك أو شغلك في الموعد اللي يناسبك، بدون أي انتظار.</p>
+      </div>
+      <div class="card orange">
+        <div class="icon">💰</div>
+        <h3>معرفة تكلفة التحاليل</h3>
+        <p>قائمة أسعار محدثة على الموقع، أو اطلب تسعيرة خاصة بيك واتساب أو رسالة.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📄</div>
+        <h3>استلام النتائج أونلاين</h3>
+        <p>بمجرد ما التحليل يخلص بنبعتلك لينك النتيجة على واتساب برقم ملفك.</p>
+      </div>
+      <div class="card orange">
+        <div class="icon">🚐</div>
+        <h3>نقل العينات بأمان</h3>
+        <p>عيناتك بتتوصل للمعمل في أسرع وقت وبأعلى معايير الجودة والسلامة.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Booking ===== -->
+<section id="booking" style="background:#eaf4fb">
+  <div class="container">
+    <div class="sec-title"><h2>حجز زيارة منزلية لسحب العينة</h2><div class="line"></div></div>
+    <p class="sec-sub">سجل دخولك الأول، وبعدين احجز موعد الزيارة المناسب ليك</p>
+
+    <div id="bookingLoginGate" class="panel" style="max-width:560px;margin-inline:auto;text-align:center">
+      <div style="font-size:3rem;margin-bottom:.6rem">🔐</div>
+      <h3 style="color:var(--blue-dark);margin-bottom:.5rem">لازم تسجل حساب الأول</h3>
+      <p style="color:var(--muted);margin-bottom:1.4rem">عشان تحجز موعد زيارة منزلية، اعمل حساب جديد أو سجل دخولك — ودي بياناتك: الاسم، رقم التليفون، والعنوان.</p>
+      <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-blue" onclick="openAuth('register')">حساب جديد</button>
+        <button class="btn btn-ghost" onclick="openAuth('login')">تسجيل الدخول</button>
+      </div>
+    </div>
+
+    <div id="bookingFormWrap" class="panel" style="display:none;max-width:720px;margin-inline:auto">
+      <h3 style="color:var(--blue-dark);margin-bottom:1.2rem">📅 بيانات حجز الزيارة</h3>
+      <div class="grid2">
+        <div class="field"><label>الاسم</label><input id="bkName" readonly></div>
+        <div class="field"><label>رقم التليفون (واتساب)</label><input id="bkPhone" readonly></div>
+      </div>
+      <div class="field"><label>تاريخ الزيارة</label><input type="date" id="bkDate"></div>
+      <div class="field"><label>وقت الزيارة المفضل</label>
+        <select id="bkTime">
+          <option value="">اختر الوقت...</option>
+          <option>من 8 صباحاً لـ 12 ظهراً</option>
+          <option>من 12 ظهراً لـ 4 عصراً</option>
+          <option>من 4 عصراً لـ 8 مساءً</option>
+        </select>
+      </div>
+      <div class="field"><label>التحاليل المطلوبة</label>
+        <textarea id="bkTests" rows="3" placeholder="مثال: تحليل دم شامل + سكر تراكمي ... أو اكتب (حسب طلب الدكتور)"></textarea>
+      </div>
+      <div class="field"><label>ملاحظات إضافية (اختياري)</label><input id="bkNotes" placeholder="أي تفاصيل تساعدنا نخدمك أحسن"></div>
+      <button class="btn btn-orange" style="width:100%" onclick="submitBooking()">إرسال طلب الحجز</button>
+      <p class="hint" style="margin-top:.6rem">بعد إرسال الطلب، المعمل يراجعه ويوافق عليه، وبيتم إرسال <b>رقم الملف</b> الخاص بيك على واتساب — ده الرقم اللي هتستلم بيه نتيجتك.</p>
+    </div>
+
+    <div id="myBookingsWrap" class="panel" style="display:none;max-width:720px;margin-inline:auto;margin-top:1.5rem">
+      <h3 style="color:var(--blue-dark);margin-bottom:1rem">📋 طلباتي</h3>
+      <div id="myBookingsList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Prices ===== -->
+<section id="prices">
+  <div class="container">
+    <div class="sec-title"><h2>قائمة أسعار التحاليل</h2><div class="line"></div></div>
+    <p class="sec-sub">دوّر على أي تحليل واعرف سعره فوراً، أو اطلب تسعيرة واتساب</p>
+    <div class="panel">
+      <div class="price-tools">
+        <div class="search-box"><input id="priceSearch" placeholder="🔍 ابحث باسم التحليل..." oninput="renderPrices()"></div>
+        <a class="btn btn-orange btn-sm" id="waPriceBtn" target="_blank">💬 اطلب تسعيرة واتساب</a>
+      </div>
+      <div id="priceEmpty" style="text-align:center;color:var(--muted);padding:2rem 0">
+        <div style="font-size:2.5rem">📊</div>
+        <p>قائمة الأسعار هتظهر هنا أول ما يتم رفعها من لوحة التحكم.</p>
+      </div>
+      <div class="price-table-wrap" id="priceTableWrap" style="display:none">
+        <table><thead><tr><th style="width:60%">اسم التحليل</th><th>السعر</th></tr></thead><tbody id="priceTbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Results ===== -->
+<section id="results" style="background:#eaf4fb">
+  <div class="container">
+    <div class="sec-title"><h2>استلام النتائج</h2><div class="line"></div></div>
+    <p class="sec-sub">أدخل رقم الملف اللي وصلك على واتساب لما المعمل وافق على طلبك</p>
+    <div class="panel" style="max-width:560px;margin-inline:auto">
+      <div class="field"><label>رقم الملف</label><input id="resFileNo" placeholder="مثال: SQ-1001"></div>
+      <button class="btn btn-blue" style="width:100%" onclick="checkResult()">بحث عن النتيجة</button>
+      <div id="resOut" style="margin-top:1.2rem"></div>
+      <p class="hint" style="margin-top:.8rem">لو نسيت رقم الملف، ابعتلنا على واتساب برقم تليفونك وهنرد عليك فوراً.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Contact ===== -->
+<section id="contact">
+  <div class="container">
+    <div class="sec-title"><h2>تواصل معنا</h2><div class="line"></div></div>
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+      <div class="card"><div class="icon">📞</div><h3>اتصل بينا</h3><p id="contactPhone">01000000000</p></div>
+      <div class="card orange"><div class="icon">💬</div><h3>واتساب</h3><p>رد سريع على استفساراتك وتسعيراتك</p><a class="btn btn-orange btn-sm" id="waContactBtn" target="_blank" style="margin-top:.5rem">ابعتلنا واتساب</a></div>
+      <div class="card"><div class="icon">📍</div><h3>العنوان</h3><p>اضغط هنا لإضافة عنوان المعمل من لوحة التحكم</p></div>
+      <div class="card orange"><div class="icon">🕐</div><h3>مواعيد العمل</h3><p>يومياً من 8 صباحاً حتى 10 مساءً<br>الزيارات المنزلية على مدار اليوم</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer>
+  <div class="container">
+    <div class="foot-grid">
+      <div>
+        <div class="brand" style="margin-bottom:.8rem">
+          <img src="logo.jpeg" alt="لوجو معامل صقر" style="width:46px;height:46px;border-radius:10px">
+          <div class="brand-name" style="color:#fff">معامل صقر للتحاليل الطبية<small style="color:#ffc266">دقة تثق بها .. وسرعة تلاحقها</small></div>
+        </div>
+        <p style="font-size:.9rem">معملك الموثوق للتحاليل الطبية بأحدث الأجهزة وأدق النتايج، مع خدمة سحب العينات المنزلية واستلام النتائج أونلاين.</p>
+      </div>
+      <div>
+        <h4>روابط سريعة</h4>
+        <p><a href="#booking">حجز زيارة منزلية</a></p>
+        <p><a href="#prices">قائمة الأسعار</a></p>
+        <p><a href="#results">استلام النتائج</a></p>
+        <p><a href="#contact">تواصل معنا</a></p>
+      </div>
+      <div>
+        <h4>خدماتنا</h4>
+        <p>سحب عينات منزلية</p>
+        <p>تحاليل شاملة ومتخصصة</p>
+        <p>تقارير أونلاين</p>
+        <p>استشارات قبل التحليل</p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year"></span> محمد طايع — جميع الحقوق محفوظة</span>
+      <a href="#" class="admin-link" onclick="openAdmin();return false">⚙️ لوحة التحكم</a>
+    </div>
+    <div class="signature">
+      <div class="sig-social">
+        <a href="#" title="فيسبوك">فيسبوك</a><span class="dot">✦</span><a href="https://x.com/m_tayea" target="_blank" title="إكس (تويتر)">إكس (تويتر)</a><span class="dot">✦</span><a href="#" title="واتساب">واتساب</a>
+      </div>
+      <div class="sig-badge">👌 صنع بواسطة <b>m_tayea</b> <span class="handle">@m_tayea</span></div>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== Auth Modal ===== -->
+<div class="modal" id="authModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('authModal')">✕</button>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabLogin" onclick="switchAuth('login')">تسجيل الدخول</button>
+      <button class="tab-btn" id="tabRegister" onclick="switchAuth('register')">حساب جديد</button>
+    </div>
+    <div id="loginForm">
+      <div class="field"><label>رقم التليفون</label><input id="liPhone" placeholder="01xxxxxxxxx"></div>
+      <div class="field"><label>كلمة المرور</label><input type="password" id="liPass" placeholder="••••••••"></div>
+      <button class="btn btn-blue" style="width:100%" onclick="doLogin()">دخول</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="field"><label>الاسم بالكامل</label><input id="rgName" placeholder="اكتب اسمك"></div>
+      <div class="field"><label>رقم التليفون (واتساب)</label><input id="rgPhone" placeholder="01xxxxxxxxx"></div>
+      <div class="field"><label>العنوان</label><input id="rgAddress" placeholder="المنطقة - الشارع - رقم العقار"></div>
+      <div class="field"><label>كلمة المرور</label><input type="password" id="rgPass" placeholder="اختر كلمة مرور قوية"></div>
+      <div class="field"><label>تأكيد كلمة المرور</label><input type="password" id="rgPass2" placeholder="اكتبها تاني"></div>
+      <button class="btn btn-orange" style="width:100%" onclick="doRegister()">إنشاء الحساب</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Admin Modal ===== -->
+<div class="modal" id="adminModal">
+  <div class="modal-box" style="width:min(900px,100%)">
+    <button class="modal-close" onclick="closeModal('adminModal')">✕</button>
+    <div id="adminLoginView">
+      <h3>⚙️ دخول لوحة التحكم</h3>
+      <div class="field"><label>كلمة مرور الإدارة</label><input type="password" id="adminPass" placeholder="••••••••"></div>
+      <button class="btn btn-blue" onclick="adminLogin()">دخول</button>
+      <p class="hint" style="margin-top:.6rem">الكلمة الافتراضية: <b>sakr2026</b> — غيّرها من الإعدادات بعد الدخول.</p>
+    </div>
+    <div id="adminDash" style="display:none">
+      <h3>⚙️ لوحة تحكم معامل صقر</h3>
+      <div class="admin-stats" id="adminStats"></div>
+
+      <h4 style="color:var(--blue-dark);margin:1rem 0 .6rem">📋 طلبات الزيارات</h4>
+      <div class="table-wrap">
+        <table><thead><tr><th>العميل</th><th>التاريخ</th><th>التحاليل</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="bkTbody"></tbody></table>
+      </div>
+
+      <h4 style="color:var(--blue-dark);margin:1rem 0 .6rem">📤 رفع نتيجة (لينك)</h4>
+      <div class="grid2">
+        <div class="field"><label>رقم الملف</label><input id="adFileNo" placeholder="SQ-1001"></div>
+        <div class="field"><label>لينك النتيجة</label><input id="adLink" placeholder="https://..."></div>
+      </div>
+      <button class="btn btn-blue btn-sm" onclick="addResult()">حفظ النتيجة وإرسال إشعار واتساب</button>
+
+      <h4 style="color:var(--blue-dark);margin:1.4rem 0 .6rem">📊 رفع قائمة الأسعار (Excel)</h4>
+      <p class="hint" style="margin-bottom:.6rem">ملف Excel بعمودين: اسم التحليل | السعر — الصفوف اللي سعرها صفر أو فاضية بتتحذف تلقائياً.</p>
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="uploadExcel(this)">
+      <p id="priceCountMsg" class="hint" style="margin-top:.4rem"></p>
+
+      <h4 style="color:var(--blue-dark);margin:1.4rem 0 .6rem">⚙️ الإعدادات</h4>
+      <div class="grid2">
+        <div class="field"><label>رقم واتساب المعمل (بكود الدولة)</label><input id="setWa" placeholder="2010xxxxxxxx"></div>
+        <div class="field"><label>تغيير كلمة مرور الإدارة</label><input id="setAdminPass" placeholder="كلمة مرور جديدة"></div>
+      </div>
+      <button class="btn btn-orange btn-sm" onclick="saveSettings()">حفظ الإعدادات</button>
+      <p class="hint" style="margin-top:.6rem">رقم الواتساب ده هو اللي بيترسل منه إشعارات رقم الملف والنتايج للعملاء.</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= Data Layer ================= */
+const DB = {
+  get:(k,d)=>{try{return JSON.parse(localStorage.getItem('sakr_'+k))??d}catch(e){return d}},
+  set:(k,v)=>localStorage.setItem('sakr_'+k,JSON.stringify(v))
+};
+let users = DB.get('users',[]);
+let bookings = DB.get('bookings',[]);
+let prices = DB.get('prices',[]);
+let results = DB.get('results',{});
+let settings = DB.get('settings',{wa:'201000000000',adminPass:'sakr2026'});
+let session = DB.get('session',null);
+
+/* ================= Helpers ================= */
+function toast(msg,err){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=err?'show err':'show';
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function waLink(phone,msg){return 'https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent(msg)}
+
+/* ================= Auth ================= */
+function openAuth(mode){openModal('authModal');switchAuth(mode||'login')}
+function switchAuth(mode){
+  document.getElementById('loginForm').style.display=mode==='login'?'block':'none';
+  document.getElementById('registerForm').style.display=mode==='register'?'block':'none';
+  document.getElementById('tabLogin').classList.toggle('active',mode==='login');
+  document.getElementById('tabRegister').classList.toggle('active',mode==='register');
+}
+function doRegister(){
+  const name=rgName.value.trim(),phone=rgPhone.value.trim(),addr=rgAddress.value.trim(),
+        p1=rgPass.value,p2=rgPass2.value;
+  if(!name||!phone||!addr) return toast('من فضلك املأ كل البيانات المطلوبة',true);
+  if(!/^01[0-9]{9}$/.test(phone)) return toast('رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01',true);
+  if(p1.length<4) return toast('كلمة المرور لازم تكون 4 أحرف على الأقل',true);
+  if(p1!==p2) return toast('كلمتي المرور غير متطابقتين',true);
+  if(users.some(u=>u.phone===phone)) return toast('الرقم ده مسجل قبل كده، سجل دخولك',true);
+  users.push({name,phone,addr,pass:p1});
+  DB.set('users',users);
+  session=phone; DB.set('session',session);
+  closeModal('authModal'); renderAuth(); toast('أهلاً بيك '+name+'! حسابك اتعمل بنجاح');
+}
+function doLogin(){
+  const u=users.find(x=>x.phone===liPhone.value.trim()&&x.pass===liPass.value);
+  if(!u) return toast('رقم التليفون أو كلمة المرور غلط',true);
+  session=u.phone; DB.set('session',session);
+  closeModal('authModal'); renderAuth(); toast('أهلاً بيك تاني يا '+u.name);
+}
+function logout(){
+  if(!confirm('عايز تسجل خروج؟')) return;
+  session=null; DB.set('session',null); renderAuth(); toast('تم تسجيل الخروج');
+}
+function currentUser(){return users.find(u=>u.phone===session)}
+function renderAuth(){
+  const u=currentUser();
+  const badge=document.getElementById('userBadge'),btn=document.getElementById('navAuthBtn');
+  if(u){
+    badge.style.display='inline-flex';
+    badge.textContent='👤 '+u.name.split(' ')[0]+' (خروج)';
+    btn.style.display='none';
+    document.getElementById('bookingLoginGate').style.display='none';
+    document.getElementById('bookingFormWrap').style.display='block';
+    document.getElementById('myBookingsWrap').style.display='block';
+    document.getElementById('bkName').value=u.name;
+    document.getElementById('bkPhone').value=u.phone;
+    renderMyBookings();
+  }else{
+    badge.style.display='none'; btn.style.display='inline-flex';
+    document.getElementById('bookingLoginGate').style.display='block';
+    document.getElementById('bookingFormWrap').style.display='none';
+    document.getElementById('myBookingsWrap').style.display='none';
+  }
+}
+
+/* ================= Booking ================= */
+function submitBooking(){
+  const u=currentUser(); if(!u) return toast('سجل دخولك الأول',true);
+  const date=bkDate.value,time=bkTime.value,tests=bkTests.value.trim(),notes=bkNotes.value.trim();
+  if(!date||!time||!tests) return toast('املأ التاريخ والوقت والتحاليل المطلوبة',true);
+  if(date < new Date().toISOString().split('T')[0]) return toast('اختار تاريخ قادم مش تاريخ فات',true);
+  bookings.push({id:Date.now(),userPhone:u.phone,name:u.name,addr:u.addr,date,time,tests,notes,status:'pending',fileNo:null});
+  DB.set('bookings',bookings);
+  bkTests.value='';bkNotes.value='';bkTime.value='';bkDate.value='';
+  renderMyBookings(); toast('طلبك اتبعت! هنراجعه ونأكدلك على واتساب برقم ملفك');
+}
+function renderMyBookings(){
+  const u=currentUser(); if(!u) return;
+  const mine=bookings.filter(b=>b.userPhone===u.phone).sort((a,b)=>b.id-a.id);
+  const el=document.getElementById('myBookingsList');
+  if(!mine.length){el.innerHTML='<p class="hint" style="text-align:center">لسه مفيش طلبات — احجز أول زيارة ليك</p>';return}
+  el.innerHTML=mine.map(b=>`
+    <div style="border:1px solid #e0ecf4;border-radius:12px;padding:1rem;margin-bottom:.8rem">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;align-items:center">
+        <b>📅 ${b.date} — ${b.time}</b>
+        ${b.fileNo?`<span class="badge b-ok">رقم الملف: ${esc(b.fileNo)}</span>`:`<span class="badge b-wait">قيد المراجعة</span>`}
+      </div>
+      <p style="color:var(--muted);font-size:.9rem;margin-top:.4rem">التحاليل: ${esc(b.tests)}</p>
+    </div>`).join('');
+}
+
+/* ================= Prices ================= */
+function renderPrices(){
+  const q=(document.getElementById('priceSearch').value||'').trim();
+  const list=prices.filter(p=>!q||p.name.includes(q));
+  const wrap=document.getElementById('priceTableWrap'),empty=document.getElementById('priceEmpty');
+  if(!prices.length){wrap.style.display='none';empty.style.display='block';return}
+  empty.style.display='none';wrap.style.display='block';
+  document.getElementById('priceTbody').innerHTML=list.length
+    ? list.map(p=>`<tr><td>${esc(p.name)}</td><td class="price">${p.price} ج.م</td></tr>`).join('')
+    : '<tr><td colspan="2" style="text-align:center;color:var(--muted)">لا توجد نتائج مطابقة للبحث</td></tr>';
+}
+
+/* ================= Results ================= */
+function checkResult(){
+  const no=resFileNo.value.trim().toUpperCase();
+  const r=results[no];
+  const out=document.getElementById('resOut');
+  if(!no) return;
+  if(!r){out.innerHTML='<p style="color:#c62828;font-weight:800;text-align:center">رقم الملف ده مالوش نتيجة لسه — جرب تاني بعد ما المعمل يأكدك.</p>';return}
+  out.innerHTML=`<div style="background:#eefaf1;border:1.5px solid #b7e4c7;border-radius:12px;padding:1.2rem;text-align:center">
+    <div style="font-size:2rem">✅</div>
+    <b style="color:#1e8e4e">نتيجتك جاهزة!</b>
+    <p style="color:var(--muted);font-size:.9rem;margin:.3rem 0 .8rem">اضغط على الزر عشان تشوف التقرير</p>
+    <a class="btn btn-blue" href="${esc(r.link)}" target="_blank">📄 عرض النتيجة</a>
+    <p class="hint" style="margin-top:.6rem">تاريخ التجهيز: ${esc(r.date||'')}</p>
+  </div>`;
+}
+
+/* ================= Admin ================= */
+let adminOk=false;
+function openAdmin(){openModal('adminModal');
+  document.getElementById('adminLoginView').style.display=adminOk?'none':'block';
+  document.getElementById('adminDash').style.display=adminOk?'block':'none';
+  if(adminOk) renderAdmin();
+}
+function adminLogin(){
+  if(adminPass.value===settings.adminPass){adminOk=true;adminPass.value='';openAdmin();toast('أهلاً بيك في لوحة التحكم')}
+  else toast('كلمة المرور غلط',true);
+}
+function nextFileNo(){
+  let n=1000+bookings.filter(b=>b.fileNo).length;
+  let no='SQ-'+n;
+  while(bookings.some(b=>b.fileNo===no)){n++;no='SQ-'+n}
+  return no;
+}
+function renderAdmin(){
+  document.getElementById('setWa').value=settings.wa;
+  document.getElementById('adminStats').innerHTML=`
+    <div class="admin-stat"><b>${users.length}</b><span>عميل مسجل</span></div>
+    <div class="admin-stat"><b>${bookings.length}</b><span>طلب زيارة</span></div>
+    <div class="admin-stat"><b>${bookings.filter(b=>b.status==='approved').length}</b><span>طلب مؤكد</span></div>
+    <div class="admin-stat"><b>${prices.length}</b><span>تحليل بالقائمة</span></div>
+    <div class="admin-stat"><b>${Object.keys(results).length}</b><span>نتيجة مرفوعة</span></div>`;
+  document.getElementById('bkTbody').innerHTML=bookings.length?bookings.map(b=>`
+    <tr class="${b.status==='approved'?'approved-row':''}">
+      <td><b>${esc(b.name)}</b><br><span class="hint">${esc(b.userPhone)} — ${esc(b.addr)}</span></td>
+      <td>${esc(b.date)}<br><span class="hint">${esc(b.time)}</span></td>
+      <td style="max-width:180px">${esc(b.tests)}</td>
+      <td>${b.status==='approved'?`<span class="badge b-ok">${esc(b.fileNo)}</span>`:'<span class="badge b-wait">قيد المراجعة</span>'}</td>
+      <td>${b.status==='approved'
+        ? `<button class="btn btn-blue btn-sm" onclick="waNotify('${b.userPhone}','${b.fileNo}')">واتساب</button>`
+        : `<button class="btn btn-orange btn-sm" onclick="approveBooking(${b.id})">اعتماد + رقم ملف</button>`}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد طلبات حتى الآن</td></tr>';
+}
+function approveBooking(id){
+  const b=bookings.find(x=>x.id===id); if(!b) return;
+  b.status='approved'; b.fileNo=nextFileNo();
+  DB.set('bookings',bookings); renderAdmin();
+  toast('تم الاعتماد — رقم الملف: '+b.fileNo);
+  setTimeout(()=>window.open(waLink(b.userPhone,
+    'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank');
+}
+function waNotify(phone,fileNo){
+  const r=results[fileNo];
+  window.open(waLink(phone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+fileNo+
+    (r?'\nنتيجتك جاهزة! شوفها من هنا: '+r.link:'\nطلبك قيد التنفيذ، هنبلغك فوراً لما النتيجة تكون جاهزة.')),'_blank');
+}
+function addResult(){
+  const no=adFileNo.value.trim().toUpperCase(),link=adLink.value.trim();
+  if(!no||!link) return toast('اكتب رقم الملف والينك',true);
+  results[no]={link,date:new Date().toLocaleDateString('ar-EG')};
+  DB.set('results',results);
+  const b=bookings.find(x=>x.fileNo===no);
+  adFileNo.value='';adLink.value='';renderAdmin();
+  toast('النتيجة اترفعت — بعت إشعار واتساب للعميل');
+  if(b) setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! شوفها من هنا: '+link),'_blank'),400);
+}
+function uploadExcel(input){
+  const f=input.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+      let count=0,skipped=0;
+      prices=[];
+      rows.forEach(r=>{
+        if(!r||!r.length) return;
+        let name=(r[0]??'').toString().trim();
+        let price=parseFloat(String(r[1]??'').replace(/[^\d.]/g,''));
+        if(name&&['اسم التحليل','التحليل','name','test','analysis','الاسم'].includes(name.toLowerCase())) return; // تخطي الهيدر
+        if(!name){skipped++;return}
+        if(!price||price<=0){skipped++;return}   // حذف الصفوف اللي سعرها صفر أو فاضي
+        prices.push({name,price});
+      });
+      count=prices.length;
+      DB.set('prices',prices); renderPrices(); renderAdmin();
+      document.getElementById('priceCountMsg').textContent='✅ تم رفع '+count+' تحليل — وتم حذف '+skipped+' صف (سعر صفر أو فاضي).';
+      toast('قائمة الأسعار اتحدثت: '+count+' تحليل');
+    }catch(err){toast('حصل خطأ في قراءة الملف — تأكد إنه Excel صحيح',true)}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(f);
+}
+function saveSettings(){
+  const wa=setWa.value.trim(),p=setAdminPass.value.trim();
+  if(wa) settings.wa=wa.replace(/\D/g,'');
+  if(p){if(p.length<4) return toast('كلمة المرور قصيرة',true); settings.adminPass=p}
+  DB.set('settings',settings); applySettings(); toast('تم حفظ الإعدادات');
+}
+function applySettings(){
+  const waMsg=encodeURIComponent('أهلاً معامل صقر، عايز أعرف تكلفة تحاليل معينة.');
+  document.getElementById('waPriceBtn').href='https://wa.me/'+settings.wa+'?text='+waMsg;
+  document.getElementById('waContactBtn').href='https://wa.me/'+settings.wa+'?text='+encodeURIComponent('أهلاً معامل صقر، عندي استفسار.');
+}
+
+/* ================= Init ================= */
+document.getElementById('year').textContent=new Date().getFullYear();
+applySettings(); renderAuth(); renderPrices();
+</script>
+</body>
+</html>
