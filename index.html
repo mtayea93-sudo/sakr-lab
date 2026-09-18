@@ -620,8 +620,21 @@ const SITE_DEFAULT={
   facebook:'https://www.facebook.com/drsakrlab?mibextid=ZbWKwL',
   hours:'نعمل 24 ساعة\n7 أيام في الأسبوع\nوالزيارات المنزلية على مدار اليوم'
 };
-const DEVICES_DEFAULT=[{id:1,name:'محلل المناعة المضيء iFlash 1800',img:'iflash1800.png',featured:true,
-  desc:'محلل كيمياء مناعية بتقنية الكيمياء المضيء (CLIA) — بيدي نتايج فائقة الدقة للهرمونات والأورام والغدة الدرقية والخصوبة والحساسية وأكتر من 100 اختبار مناعي في وقت قياسي.'}];
+const DEVICES_DEFAULT=[
+{id:1,name:'محلل المناعة المضيء iFlash 1800',img:'iflash1800.png',featured:true,
+ desc:'أحدث وأدق جهاز هرمونات ودلالات الأورام — تقنية الكيمياء المضيء (CLIA) بأعلى دقة لأكتر من 100 اختبار مناعي في وقت قياسي.'},
+{id:2,name:'Mindray BS-230',img:'mindray-bs230.jpg',featured:false,
+ desc:'أحدث جهاز أوتوميشن كامل لتحليل كيمياء الدم — دقة وسرعة في معالجة العينات.'},
+{id:3,name:'EDAN I15',img:'edan-i15.jpg',featured:false,
+ desc:'لتحليل غازات الدم — نتايج دقيقة في ثوانٍ معدودة.'},
+{id:4,name:'Sensacore ST-200 Plus',img:'sensacore-st200.jpg',featured:false,
+ desc:'لتحليل أملاح الدم — قياس دقيق وسريع لأملاح الجسم الحيوية.'},
+{id:5,name:'ROBONIK Prietest Touch Plus',img:'robonik-prietest.jpg',featured:false,
+ desc:'جهاز كيمياء الدم روبونيك — شاشة لمس وتشغيل سهل وسريع.'},
+{id:6,name:'Mindray BA-88A',img:'mindray-ba88a.jpg',featured:false,
+ desc:'جهاز كيمياء الدم BA-88A — كفاءة عالية في التحاليل اليومية.'},
+{id:7,name:'GPP-100',img:'gpp-100.jpg',featured:false,
+ desc:'جهاز الـ Nephelometry — أدق طرق قياس البروتينات في الدم.'}];
 
 let users=DBL.get('users',[]);
 let bookings=DBL.get('bookings',[]);
@@ -630,6 +643,7 @@ let results=DBL.get('results',{});
 let settings=DBL.get('settings',{wa:'201065756591',adminPass:'sakr2026'});
 let site=DBL.get('site',SITE_DEFAULT);
 let devices=DBL.get('devices',DEVICES_DEFAULT);
+if(DBL.get('devVer',0)!==2){devices=JSON.parse(JSON.stringify(DEVICES_DEFAULT));DBL.set('devices',devices);DBL.set('devVer',2)}
 let session=DBL.get('session',null);
 let dashSession=(()=>{try{return JSON.parse(sessionStorage.getItem('sakr_dash'))}catch(e){return null}})();
 localStorage.removeItem('sakr_dashSession');
@@ -840,14 +854,13 @@ function renderPrices(){
   empty.style.display='none';wrap.style.display='block';
   document.getElementById('priceHint').style.display='block';
   document.getElementById('priceTbody').innerHTML=list.length
-    ? list.map((p,i)=>'<tr><td>'+esc(p.name)+'</td><td style="text-align:center"><input type="checkbox" class="pchk" data-name="'+esc(p.name)+'" data-price="'+p.price+'" '+(chosenTests[p.name]?'checked':'')+' onchange="recalcTotal()"></td></tr>').join('')
+    ? list.map((p,i)=>'<tr><td>'+esc(p.name)+'</td><td style="text-align:center"><input type="checkbox" class="pchk" data-name="'+esc(p.name)+'" data-price="'+p.price+'" '+(chosenTests[p.name]?'checked':'')+' onchange="onPick(this)"></td></tr>').join('')
     : '<tr><td colspan="2" style="text-align:center;color:var(--muted)">لا توجد نتائج مطابقة للبحث</td></tr>';
   recalcTotal();
 }
 function toggleCart(){const b=document.getElementById('totalBar');b.style.display=b.style.display==='block'?'none':'block'}
+function onPick(c){const n=c.dataset.name,p=parseFloat(c.dataset.price);if(c.checked)chosenTests[n]=p;else delete chosenTests[n];recalcTotal()}
 function recalcTotal(){
-  chosenTests={};
-  document.querySelectorAll('.pchk:checked').forEach(c=>{chosenTests[c.dataset.name]=parseFloat(c.dataset.price)});
   const names=Object.keys(chosenTests);
   const bar=document.getElementById('totalBar'),fab=document.getElementById('cartFab');
   if(!names.length){bar.style.display='none';fab.style.display='none';return}
@@ -864,7 +877,7 @@ function recalcTotal(){
   document.getElementById('waQuoteBtn').href=waLink(settings.wa,
     'أهلاً معامل صقر 🦅\nعايز أحجز التحاليل دي:\n'+lines+'\nالمجموع الكلي: '+total+' ج.م\nممكن أحجز زيارة منزلية؟');
 }
-function clearSelection(){document.querySelectorAll('.pchk').forEach(c=>c.checked=false);recalcTotal()}
+function clearSelection(){chosenTests={};document.querySelectorAll('.pchk').forEach(c=>c.checked=false);recalcTotal()}
 
 /* ================= Results ================= */
 function resultList(no){
