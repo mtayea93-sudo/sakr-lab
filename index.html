@@ -11,6 +11,12 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b5e9c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="معامل صقر">
 <style>
 :root{--blue:#1587d6;--blue-dark:#0b5e9c;--blue-deep:#083f6b;--orange:#ff9800;--orange-dark:#e68900;--bg:#f4f9fd;--text:#12324a;--muted:#5b7a90;--radius:16px;--shadow:0 10px 30px rgba(11,94,156,.12)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -257,6 +263,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a href="#contact">تواصل معنا</a>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center">
+      <button id="bellBtn" class="btn btn-ghost btn-sm" style="display:none;position:relative" onclick="toggleNotifs()">🔔<span id="bellCount" style="display:none;position:absolute;top:-7px;left:-7px;background:#e53935;color:#fff;font-size:.68rem;border-radius:50%;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px;font-weight:900"></span></button>
       <div id="userBadge" onclick="logout()"></div>
       <button class="btn btn-blue btn-sm" id="navAuthBtn" onclick="openAuth()">تسجيل الدخول</button>
       <button class="btn btn-orange btn-sm" id="navMenuBtn" onclick="var m=document.getElementById('mobileMenu');m.style.display=m.style.display==='flex'?'none':'flex'">☰</button>
@@ -361,6 +368,11 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <div class="field"><label>ملاحظات إضافية (اختياري)</label><input id="bkNotes" placeholder="أي تفاصيل تساعدنا نخدمك أحسن"></div>
       <button class="btn btn-orange" style="width:100%" onclick="submitBooking()">إرسال طلب الحجز</button>
       <p class="hint" style="margin-top:.6rem">بعد إرسال الطلب، المعمل يراجعه ويوافق عليه، وبيتم إرسال <b>رقم الملف</b> الخاص بيك على واتساب — ده الرقم اللي هتستلم بيه نتيجتك.</p>
+      <div id="bkSuccess" style="display:none;margin-top:1rem;background:#eefaf1;border:1.5px solid #b7e4c7;border-radius:12px;padding:1rem;text-align:center">
+        <b style="color:#1e8e4e">✅ تم استلام طلبك بنجاح!</b>
+        <p class="hint" style="margin:.3rem 0 .6rem">فتحنالك واتساب المعمل — اضغط "إرسال" عشان يوصلهم إشعار فوري بطلبك</p>
+        <a class="btn btn-orange btn-sm" id="bkWaBtn" target="_blank">📲 إرسال إشعار واتساب للمعمل</a>
+      </div>
     </div>
 
     <div id="myBookingsWrap" class="panel" style="display:none;max-width:720px;margin-inline:auto;margin-top:1.5rem">
@@ -493,6 +505,12 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
   </div>
 </div>
 
+<div id="installBar" class="install-bar">
+  <span>📲 ثبّت تطبيق معامل صقر على موبايلك واستلم إشعار النتيجة فوراً</span>
+  <button class="btn btn-orange btn-sm" onclick="doInstall()">تثبيت التطبيق</button>
+  <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.4)" onclick="hideInstall()">✕</button>
+</div>
+<div id="notifDrop" class="notif-drop"></div>
 <div id="toast"></div>
 
 <!-- ===== Admin Dashboard (Full Screen) ===== -->
@@ -547,7 +565,9 @@ const FIREBASE_CONFIG={
   projectId:"sakrlab2026",
   storageBucket:"sakrlab2026.firebasestorage.app",
   messagingSenderId:"1049726811378",
-  appId:"1:1049726811378:web:0959efa43bad0f7e24e46b"
+  appId:"1:1049726811378:web:0959efa43bad0f7e24e46b",
+  /* مفتاح الإشعارات الفورية — بيتعمل من Console → Cloud Messaging → Web Push certificates (شوف FCM-FUNCTION.js) */
+  vapidKey:""
 };
 
 /* ================= Data Layer ================= */
@@ -555,9 +575,14 @@ const DBL={
   get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem('sakr_'+k));return v==null?d:v}catch(e){return d}},
   set:(k,v)=>{localStorage.setItem('sakr_'+k,JSON.stringify(v));if(FB.ready){try{FB.db.ref('sakr/'+k).set(v)}catch(e){}}}
 };
-const FB={ready:false,db:null,connected:false};
+const FB={ready:false,db:null,connected:false,loadFailed:false};
 function initFirebase(){
-  if(typeof firebase==='undefined'||!FIREBASE_CONFIG.apiKey)return;
+  if(!FIREBASE_CONFIG.apiKey)return;
+  if(typeof firebase==='undefined'){
+    FB.loadFailed=true;
+    const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash();
+    return;
+  }
   try{
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
@@ -674,6 +699,60 @@ function doLogin(){
 }
 function logout(){if(!confirm('عايز تسجل خروج؟'))return;session=null;DBL.set('session',null);renderAuth();toast('تم تسجيل الخروج')}
 function currentUser(){return users.find(u=>u.phone===session)}
+/* ===== إشعارات التطبيق + جرس الإشعارات ===== */
+function pushNotif(phone,msg){
+  const nf=DBL.get('notifs',{});const arr=nf[phone]||[];
+  arr.unshift({msg,ts:Date.now()});nf[phone]=arr.slice(0,30);DBL.set('notifs',nf);
+  if(session===phone){renderBell();toast(msg)}
+}
+function renderBell(){
+  const b=document.getElementById('bellBtn');if(!b)return;
+  if(!session){b.style.display='none';return}
+  b.style.display='inline-flex';
+  const seen=parseInt(localStorage.getItem('sakr_seen_'+session)||'0');
+  const arr=(DBL.get('notifs',{})[session])||[];
+  const unread=arr.filter(n=>n.ts>seen).length;
+  const bc=document.getElementById('bellCount');
+  bc.textContent=unread;bc.style.display=unread?'inline-block':'none';
+}
+function toggleNotifs(){
+  const d=document.getElementById('notifDrop');
+  if(d.style.display==='block'){d.style.display='none';return}
+  const arr=(DBL.get('notifs',{})[session])||[];
+  localStorage.setItem('sakr_seen_'+session,Date.now());renderBell();
+  d.innerHTML='<div style="font-weight:900;color:var(--blue-dark);margin-bottom:.5rem">🔔 الإشعارات</div>'+
+    (arr.length?arr.slice(0,10).map(n=>'<div class="notif-item">'+esc(n.msg)+'<br><span class="hint">'+new Date(n.ts).toLocaleString('ar-EG')+'</span></div>').join(''):'<p class="hint">لا توجد إشعارات حتى الآن</p>')+
+    '<button class="btn btn-orange btn-sm" style="width:100%;margin-top:.5rem" onclick="enablePush()">⚡ فعّل الإشعارات الفورية (توصل حتى والموقع مقفول)</button>';
+  d.style.display='block';
+}
+document.addEventListener('click',e=>{
+  const d=document.getElementById('notifDrop');
+  if(d&&d.style.display==='block'&&!e.target.closest('#notifDrop')&&!e.target.closest('#bellBtn'))d.style.display='none';
+});
+/* ===== تثبيت التطبيق (PWA) ===== */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('sakr_no_install'))document.getElementById('installBar').style.display='flex'});
+window.addEventListener('appinstalled',()=>{document.getElementById('installBar').style.display='none';toast('تم تثبيت التطبيق ✅')});
+function hideInstall(){document.getElementById('installBar').style.display='none';localStorage.setItem('sakr_no_install','1')}
+function doInstall(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')hideInstall()})}
+  else if(/iphone|ipad|ipod/i.test(navigator.userAgent)){toast('على الآيفون: زرار المشاركة ⎋ ثم "إضافة إلى الشاشة الرئيسية"')}
+}
+/* ===== الإشعارات الفورية (FCM) ===== */
+function enablePush(){
+  if(!('Notification' in window)){toast('متصفحك مش بيدعم الإشعارات',true);return}
+  Notification.requestPermission().then(perm=>{
+    if(perm!=='granted'){toast('إذن الإشعارات مرفوض — فعّله من إعدادات المتصفح',true);return}
+    if(!FB.ready){toast('لازم Firebase يكون متصل الأول — راجع حالة الاتصال',true);return}
+    if(!FIREBASE_CONFIG.vapidKey){toast('لازم تضيف مفتاح VAPID — الخطوات في ملف FCM-FUNCTION.js',true);return}
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      return firebase.messaging().getToken({vapidKey:FIREBASE_CONFIG.vapidKey,serviceWorkerRegistration:reg});
+    }).then(function(tok){
+      if(tok&&session){FB.db.ref('sakr/tokens').push({phone:session,token:tok});toast('الإشعارات الفورية اشتغلت 🔔')}
+      else toast('مش قادر أجيب توكن الجهاز',true);
+    }).catch(function(e){toast('حصل خطأ: '+((e&&e.message)||e),true)});
+  });
+}
 function renderAuth(){
   const u=currentUser();
   const badge=document.getElementById('userBadge'),btn=document.getElementById('navAuthBtn');
@@ -691,6 +770,7 @@ function renderAuth(){
     document.getElementById('bookingFormWrap').style.display='none';
     document.getElementById('myBookingsWrap').style.display='none';
   }
+  renderBell();
 }
 
 /* ================= Booking ================= */
@@ -711,10 +791,16 @@ function submitBooking(){
   if(!tests&&!bkImgData)return toast('اكتب التحاليل أو ارفع صورة الروشتة — حاجة واحدة تكفي',true);
   if(date<new Date().toISOString().split('T')[0])return toast('اختار تاريخ قادم مش تاريخ فات',true);
   if(pf&&!bookings.some(b=>b.fileNo===pf))return toast('رقم الملف '+pf+' مش موجود — اتأكد منه أو سيبه فاضي',true);
+  const hadImg=!!bkImgData;
   bookings.push({id:Date.now(),userPhone:u.phone,name:u.name,addr:u.addr,date,time,tests:tests||'(صورة روشتة مرفوعة)',notes,img:bkImgData,status:'pending',fileNo:null,patientFile:pf||null,createdAt:new Date().toLocaleString('ar-EG')});
   DBL.set('bookings',bookings);
   bkTests.value='';bkNotes.value='';bkTime.value='';bkDate.value='';document.getElementById('bkFile').value='';clearBkImg();
   renderMyBookings();toast('طلبك اتبعت! هنراجعه ونأكدلك على واتساب برقم ملفك');
+  /* إشعار فوري لواتساب المعمل بطلب الحجز الجديد */
+  const waMsg='🦅 طلب حجز زيارة منزلية جديد\nالاسم: '+u.name+'\nالتليفون: '+u.phone+'\nالعنوان: '+u.addr+'\nالتاريخ: '+date+'\nالوقت: '+time+'\nالتحاليل: '+(tests||'(صورة روشتة مرفوعة)')+(notes?'\nملاحظات: '+notes:'')+(hadImg?'\n📷 مرفق صورة الروشتة على الموقع':'')+(pf?'\nرقم الملف: '+pf:'');
+  document.getElementById('bkWaBtn').href=waLink(settings.wa,waMsg);
+  document.getElementById('bkSuccess').style.display='block';
+  window.open(waLink(settings.wa,waMsg),'_blank');
 }
 function renderMyBookings(){
   const u=currentUser();if(!u)return;
@@ -762,27 +848,34 @@ function recalcTotal(){
 function clearSelection(){document.querySelectorAll('.pchk').forEach(c=>c.checked=false);recalcTotal()}
 
 /* ================= Results ================= */
+function resultList(no){
+  const r=results[no];if(!r)return[];
+  if(r.entries)return r.entries;
+  if(r.data||r.link)return[{data:r.data,link:r.link,name:r.name,type:r.type,date:r.date,addedAt:1}];
+  return[];
+}
 function checkResult(){
   const no=resFileNo.value.trim().toUpperCase();
-  const r=results[no];
+  const entries=resultList(no);
   const out=document.getElementById('resOut');
   if(!no)return;
-  if(!r){out.innerHTML='<p style="color:#c62828;font-weight:800;text-align:center">رقم الملف ده مالوش نتيجة لسه — جرب تاني بعد ما المعمل يأكدك.</p>';return}
-  let btn;
-  if(r.data)btn='<button class="btn btn-blue" onclick="openResult(\''+no+'\')">📄 عرض النتيجة ('+(r.type==='pdf'?'PDF':'صورة')+')</button>';
-  else if(r.link)btn='<a class="btn btn-blue" href="'+esc(r.link)+'" target="_blank">📄 عرض النتيجة</a>';
-  else btn='<p style="color:#c62828">بيانات النتيجة غير مكتملة</p>';
-  out.innerHTML='<div style="background:#eefaf1;border:1.5px solid #b7e4c7;border-radius:12px;padding:1.2rem;text-align:center">'+
-    '<div style="font-size:2rem">✅</div><b style="color:#1e8e4e">نتيجتك جاهزة!</b>'+
-    '<p style="color:var(--muted);font-size:.9rem;margin:.3rem 0 .8rem">'+(r.name?esc(r.name):'')+'</p>'+btn+
-    '<p class="hint" style="margin-top:.6rem">تاريخ التجهيز: '+esc(r.date||'')+'</p></div>';
+  if(!entries.length){out.innerHTML='<p style="color:#c62828;font-weight:800;text-align:center">رقم الملف ده مالوش نتيجة لسه — جرب تاني بعد ما المعمل يأكدك.</p>';return}
+  const rev=entries.slice().reverse();
+  out.innerHTML='<div style="background:#eefaf1;border:1.5px solid #b7e4c7;border-radius:12px;padding:1.2rem">'+
+    '<div style="text-align:center"><div style="font-size:2rem">✅</div>'+
+    '<b style="color:#1e8e4e">📁 أرشيف نتايجك ('+entries.length+') — محفوظة وترجعلها في أي وقت</b></div>'+
+    '<div style="margin-top:.8rem">'+rev.map((e,i)=>{
+      const idx=entries.length-1-i;
+      return '<div class="chosen-item" style="border-color:#b7e4c7;color:var(--text);align-items:center"><span>📄 '+(e.name?esc(e.name):'نتيجة')+' <span class="hint">— '+esc(e.date||'')+'</span></span><button class="btn btn-blue btn-sm" onclick="openResult(\''+no+'\','+idx+')">عرض</button></div>';
+    }).join('')+'</div></div>';
 }
 function dataUrlToBlob(d){const parts=d.split(',');const mime=(parts[0].match(/:(.*?);/)||[])[1]||'application/octet-stream';const bin=atob(parts[1]);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:mime})}
-function openResult(no){
-  const r=results[no];if(!r||!r.data)return;
-  const url=URL.createObjectURL(dataUrlToBlob(r.data));
-  window.open(url,'_blank');
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
+function openResult(no,idx){
+  const list=resultList(no);if(!list.length)return;
+  if(idx==null)idx=list.length-1;
+  const e=list[idx];if(!e)return;
+  if(e.data){const url=URL.createObjectURL(dataUrlToBlob(e.data));window.open(url,'_blank');setTimeout(()=>URL.revokeObjectURL(url),60000)}
+  else if(e.link)window.open(e.link,'_blank');
 }
 function applySettings(){
   const waMsg=encodeURIComponent('أهلاً معامل صقر، عندي استفسار.');
@@ -854,7 +947,7 @@ function switchTab(k){activeTab=k;renderDash()}
 function vOverview(c){
   var connStatus=FB.ready
     ?(FB.connected?'متصل بـ Firebase - البيانات بتتزامن لحظياً على كل الأجهزة':'Firebase مش متصل - راجع databaseURL وقواعد Realtime Database في الكونسول')
-    :'وضع التخزين المحلي - البيانات موجودة على الجهاز ده بس';
+    :(FB.loadFailed?'ملفات Firebase مش بتحمل - جرّب نافذة تصفح خفي أو عطّل AdBlock (شوف تبويب Network)':'وضع التخزين المحلي - البيانات موجودة على الجهاز ده بس');
   c.innerHTML='<div class="admin-stats">'+
   '<div class="admin-stat"><b>'+users.filter(u=>u.role!=='staff').length+'</b><span>عميل مسجل</span></div>'+
   '<div class="admin-stat"><b>'+users.filter(u=>u.role==='staff').length+'</b><span>موظف</span></div>'+
@@ -928,12 +1021,17 @@ async function addResult(){
     data=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f)});
     name=f.name;type='pdf';
   }else return toast('الملف لازم يكون PDF أو صورة',true);
-  results[no]={data,name,type,date:new Date().toLocaleString('ar-EG')};
+  const entries=resultList(no);
+  entries.push({data,name,type,date:new Date().toLocaleString('ar-EG'),addedAt:Date.now()});
+  results[no]={entries};
   DBL.set('results',results);
   const b=bookings.find(x=>x.fileNo===no);
   adFileNo.value='';document.getElementById('resFileUp').value='';renderDash();
   toast('النتيجة اترفعت — بعت إشعار واتساب للعميل');
-  if(b)setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج"'),'_blank'),400);
+  if(b){
+    pushNotif(b.userPhone,'📄 نتيجة جديدة جاهزة — رقم ملفك: '+no+' ('+name+')');
+    setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج"'),'_blank'),400);
+  }
 }
 function delResult(no){if(!confirm('تحذف نتيجة '+no+'؟'))return;delete results[no];DBL.set('results',results);renderDash();toast('تم الحذف')}
 function vPrices(c){
@@ -990,27 +1088,41 @@ async function handleDevImg(input){
   document.getElementById('devImgPrev').innerHTML='<img src="'+devImgData+'" style="max-width:140px;border-radius:10px;border:2px solid var(--orange)">';
   toast('الصورة جاهزة ✅');input.value='';
 }
+let editDevId=null;
 function vDevices(c){
+  const eu=editDevId?devices.find(d=>d.id===editDevId):null;
   const items=devices.map(d=>
     '<div class="dev-admin-item"><img src="'+esc(d.img)+'" alt="">'+
     '<div style="flex:1;min-width:180px"><b>'+esc(d.name)+'</b>'+(d.featured?' <span class="badge b-ok">الجهاز المميز</span>':'')+'<p class="hint">'+esc(d.desc)+'</p></div>'+
     '<div style="display:flex;gap:.4rem;flex-wrap:wrap">'+
-    (!d.featured?'<button class="btn btn-blue btn-sm" onclick="featureDev('+d.id+')">تمييز</button>':'')+
+    '<button class="btn btn-blue btn-sm" onclick="editDev('+d.id+')">تعديل</button>'+
+    (!d.featured?'<button class="btn btn-ghost btn-sm" onclick="featureDev('+d.id+')">تمييز</button>':'')+
     '<button class="btn btn-danger btn-sm" onclick="delDev('+d.id+')">حذف</button></div></div>').join('');
-  c.innerHTML='<div class="dash-card"><h3>➕ إضافة جهاز جديد</h3>'+
-  '<div class="grid2"><div class="field"><label>اسم الجهاز</label><input id="dvName"></div>'+
-  '<div class="field"><label>صورة الجهاز</label><div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
+  c.innerHTML='<div class="dash-card"><h3>'+(eu?'✏️ تعديل جهاز':'➕ إضافة جهاز جديد')+'</h3>'+
+  '<div class="grid2"><div class="field"><label>اسم الجهاز</label><input id="dvName" value="'+(eu?esc(eu.name):'')+'"></div>'+
+  '<div class="field"><label>صورة الجهاز'+(eu?' (سيبها فاضية لو عايز تحتفظ بالصورة الحالية)':'')+'</label><div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
   '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 من الملفات<input type="file" accept="image/*" hidden onchange="handleDevImg(this)"></label>'+
   '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📷 بالكاميرا<input type="file" accept="image/*" capture="environment" hidden onchange="handleDevImg(this)"></label></div>'+
-  '<div id="devImgPrev" style="margin-top:.5rem"></div></div></div>'+
-  '<div class="field"><label>وصف الجهاز</label><textarea id="dvDesc" rows="3"></textarea></div>'+
-  '<label style="display:flex;align-items:center;gap:.5rem;font-weight:700;cursor:pointer;margin-bottom:1rem"><input type="checkbox" id="dvFeat" style="width:auto"> اجعله الجهاز المميز (يظهر كبير في أول الصفحة)</label>'+
-  '<button class="btn btn-orange btn-sm" onclick="addDevice()">إضافة الجهاز</button></div>'+
+  '<div id="devImgPrev" style="margin-top:.5rem">'+(eu?'<img src="'+esc(eu.img)+'" style="max-width:140px;border-radius:10px;border:2px solid var(--blue)">':'')+'</div></div></div>'+
+  '<div class="field"><label>وصف الجهاز</label><textarea id="dvDesc" rows="3">'+(eu?esc(eu.desc):'')+'</textarea></div>'+
+  '<label style="display:flex;align-items:center;gap:.5rem;font-weight:700;cursor:pointer;margin-bottom:1rem"><input type="checkbox" id="dvFeat" style="width:auto" '+(eu&&eu.featured?'checked':'')+'> اجعله الجهاز المميز (يظهر كبير في أول الصفحة)</label>'+
+  '<button class="btn '+(eu?'btn-blue':'btn-orange')+' btn-sm" onclick="addDevice()">'+(eu?'💾 حفظ التعديلات':'إضافة الجهاز')+'</button> '+
+  (eu?'<button class="btn btn-ghost btn-sm" onclick="editDevId=null;devImgData=null;renderDash()">إلغاء</button>':'')+'</div>'+
   '<div class="dash-card"><h3>الأجهزة الحالية ('+devices.length+')</h3>'+(items||'<p class="hint">لا توجد أجهزة</p>')+'</div>';
 }
+function editDev(id){editDevId=id;const d=devices.find(x=>x.id===id);devImgData=d?d.img:null;renderDash()}
 function addDevice(){
   const n=dvName.value.trim(),ds=dvDesc.value.trim();
-  if(!n||!devImgData)return toast('اكتب اسم الجهاز وارفع صورته',true);
+  if(!n)return toast('اكتب اسم الجهاز',true);
+  if(editDevId){
+    const d=devices.find(x=>x.id===editDevId);
+    d.name=n;d.desc=ds;
+    if(devImgData)d.img=devImgData;
+    if(dvFeat.checked)devices.forEach(x=>x.featured=(x.id===d.id));
+    DBL.set('devices',devices);editDevId=null;devImgData=null;renderDevices();renderDash();toast('تم حفظ التعديلات ✅');
+    return;
+  }
+  if(!devImgData)return toast('ارفع صورة الجهاز',true);
   devices.forEach(d=>d.featured=false);
   devices.push({id:Date.now(),name:n,desc:ds,img:devImgData,featured:dvFeat.checked});
   DBL.set('devices',devices);devImgData=null;renderDevices();renderDash();toast('الجهاز اتضاف ✅');
@@ -1194,6 +1306,15 @@ document.getElementById('year').textContent=new Date().getFullYear();
 document.getElementById('bkImgFile').addEventListener('change',e=>handleBkImg(e.target));
 document.getElementById('bkImgCam').addEventListener('change',e=>handleBkImg(e.target));
 document.querySelectorAll('.stat b').forEach(el=>cntIO.observe(el));
+/* تسجيل عامل الخدمة (PWA) */
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* لو سكريبتات Firebase اتأخرت، حاول تاني */
+window.addEventListener('load',()=>setTimeout(()=>{if(typeof firebase!=='undefined'&&!FB.ready)initFirebase()},2500));
+/* تلميح التثبيت على الآيفون (Apple مابتدعمش برومبت التثبيت التلقائي) */
+window.addEventListener('load',()=>setTimeout(()=>{
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone&&!localStorage.getItem('sakr_no_install'))
+    document.getElementById('installBar').style.display='flex';
+},4000));
 initFirebase();applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals();
 if(dashSession)openAdmin();
 </script>
