@@ -120,7 +120,13 @@ a.card:hover{transform:translateY(-6px);border-top-color:var(--orange)}
 .search-box{flex:1;min-width:220px}
 .price-table-wrap{max-height:440px;overflow:auto;border-radius:12px;border:1px solid #e0ecf4}
 .pchk{width:20px;height:20px;accent-color:var(--orange);cursor:pointer}
-.total-bar{position:sticky;bottom:0;background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));color:#fff;border-radius:18px;padding:1.3rem 1.5rem;margin-top:1.4rem;box-shadow:0 -10px 40px rgba(8,63,107,.3)}
+.cart-panel{position:fixed;top:50%;left:1rem;transform:translateY(-50%);width:min(320px,90vw);max-height:70vh;overflow:auto;background:linear-gradient(160deg,var(--blue-deep),var(--blue-dark));color:#fff;border-radius:18px;padding:1.2rem 1.3rem;box-shadow:0 25px 60px rgba(8,63,107,.5);z-index:95;display:none;border:1px solid rgba(255,255,255,.15)}
+.cart-fab{position:fixed;bottom:5.5rem;left:1rem;z-index:94;display:none;align-items:center;gap:.4rem;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;border:none;border-radius:30px;padding:.6rem 1.1rem;font-family:inherit;font-weight:900;font-size:.9rem;cursor:pointer;box-shadow:0 12px 30px rgba(255,152,0,.5);transition:.2s}
+.cart-fab:hover{transform:scale(1.06)}
+@media(max-width:700px){
+  .cart-panel{top:auto;bottom:0;left:0;right:0;width:100%;transform:none;border-radius:20px 20px 0 0;max-height:55vh;box-shadow:0 -15px 50px rgba(0,0,0,.4)}
+  .cart-fab{bottom:4.6rem}
+}
 .total-bar h4{color:#ffc266;margin-bottom:.5rem}
 .chosen-item{display:flex;justify-content:space-between;padding:.25rem 0;font-size:.92rem;border-bottom:1px dashed rgba(255,255,255,.2)}
 .grand{display:flex;justify-content:space-between;align-items:center;margin-top:.8rem;font-size:1.15rem;font-weight:900}
@@ -263,6 +269,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a href="#contact">تواصل معنا</a>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center">
+      <button id="installBtn" class="btn btn-orange btn-sm" style="display:none" onclick="doInstall()">📲 حمّل التطبيق</button>
       <button id="bellBtn" class="btn btn-ghost btn-sm" style="display:none;position:relative" onclick="toggleNotifs()">🔔<span id="bellCount" style="display:none;position:absolute;top:-7px;left:-7px;background:#e53935;color:#fff;font-size:.68rem;border-radius:50%;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px;font-weight:900"></span></button>
       <div id="userBadge" onclick="logout()"></div>
       <button class="btn btn-blue btn-sm" id="navAuthBtn" onclick="openAuth()">تسجيل الدخول</button>
@@ -622,7 +629,8 @@ let settings=DBL.get('settings',{wa:'201065756591',adminPass:'sakr2026'});
 let site=DBL.get('site',SITE_DEFAULT);
 let devices=DBL.get('devices',DEVICES_DEFAULT);
 let session=DBL.get('session',null);
-let dashSession=DBL.get('dashSession',null);
+let dashSession=(()=>{try{return JSON.parse(sessionStorage.getItem('sakr_dash'))}catch(e){return null}})();
+localStorage.removeItem('sakr_dashSession');
 let bkImgData=null;
 let chosenTests={};
 
@@ -731,9 +739,9 @@ document.addEventListener('click',e=>{
 });
 /* ===== تثبيت التطبيق (PWA) ===== */
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('sakr_no_install'))document.getElementById('installBar').style.display='flex'});
-window.addEventListener('appinstalled',()=>{document.getElementById('installBar').style.display='none';toast('تم تثبيت التطبيق ✅')});
-function hideInstall(){document.getElementById('installBar').style.display='none';localStorage.setItem('sakr_no_install','1')}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('sakr_no_install'))document.getElementById('installBtn').style.display='inline-flex'});
+window.addEventListener('appinstalled',()=>{document.getElementById('installBtn').style.display='none';toast('تم تثبيت التطبيق ✅')});
+function hideInstall(){document.getElementById('installBtn').style.display='none';localStorage.setItem('sakr_no_install','1')}
 function doInstall(){
   if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')hideInstall()})}
   else if(/iphone|ipad|ipod/i.test(navigator.userAgent)){toast('على الآيفون: زرار المشاركة ⎋ ثم "إضافة إلى الشاشة الرئيسية"')}
@@ -816,9 +824,14 @@ function renderMyBookings(){
 }
 
 /* ================= Prices (selection + total) ================= */
+function normTxt(s){return String(s).toLowerCase().replace(/[()[\]\/\\\-_,.:;+*]/g,' ').replace(/\s+/g,' ').trim()}
 function renderPrices(){
-  const q=(document.getElementById('priceSearch').value||'').trim();
-  const list=prices.filter(p=>!q||p.name.includes(q));
+  const q=normTxt(document.getElementById('priceSearch').value||'');
+  const list=prices.filter(p=>{
+    if(!q)return true;
+    const n=normTxt(p.name);
+    return n.includes(q)||q.split(' ').every(w=>w&&n.includes(w));
+  });
   const wrap=document.getElementById('priceTableWrap'),empty=document.getElementById('priceEmpty');
   document.getElementById('stTests').textContent='+'+prices.length;
   if(!prices.length){wrap.style.display='none';empty.style.display='block';return}
@@ -828,18 +841,21 @@ function renderPrices(){
     : '<tr><td colspan="2" style="text-align:center;color:var(--muted)">لا توجد نتائج مطابقة للبحث</td></tr>';
   recalcTotal();
 }
+function toggleCart(){const b=document.getElementById('totalBar');b.style.display=b.style.display==='block'?'none':'block'}
 function recalcTotal(){
   chosenTests={};
   document.querySelectorAll('.pchk:checked').forEach(c=>{chosenTests[c.dataset.name]=parseFloat(c.dataset.price)});
   const names=Object.keys(chosenTests);
-  const bar=document.getElementById('totalBar');
-  if(!names.length){bar.style.display='none';return}
-  bar.style.display='block';
+  const bar=document.getElementById('totalBar'),fab=document.getElementById('cartFab');
+  if(!names.length){bar.style.display='none';fab.style.display='none';return}
+  fab.style.display='flex';
+  if(window.innerWidth>700)bar.style.display='block';
   let total=0;
   document.getElementById('chosenList').innerHTML=names.map(n=>{
     total+=chosenTests[n];
     return '<div class="chosen-item"><span>'+esc(n)+'</span><span>'+chosenTests[n]+' ج.م</span></div>';
   }).join('');
+  document.getElementById('fabInfo').textContent=names.length+' تحليل — '+total+' ج.م';
   document.getElementById('grandTotal').textContent=total+' ج.م';
   const lines=names.map(n=>'• '+n+' — '+chosenTests[n]+' ج.م').join('\n');
   document.getElementById('waQuoteBtn').href=waLink(settings.wa,
@@ -921,16 +937,16 @@ function dashLoginMode(m){
   document.getElementById('dTabStaff').classList.toggle('active',m==='staff');
 }
 function dashLoginMaster(){
-  if(dMasterPass.value===settings.adminPass){dashSession={type:'master'};DBL.set('dashSession',dashSession);dMasterPass.value='';openAdmin();toast('أهلاً بيك يا مدير المعمل')}
+  if(dMasterPass.value===settings.adminPass){dashSession={type:'master'};sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));dMasterPass.value='';openAdmin();toast('أهلاً بيك يا مدير المعمل')}
   else toast('كلمة المرور غلط',true);
 }
 function dashLoginStaff(){
   const u=users.find(x=>x.phone===dStaffPhone.value.trim()&&x.pass===dStaffPass.value&&x.role==='staff'&&x.active!==false);
   if(!u)return toast('بيانات الموظف غلط أو الحساب موقوف',true);
-  dashSession={type:'staff',phone:u.phone};DBL.set('dashSession',dashSession);
+  dashSession={type:'staff',phone:u.phone};sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));
   dStaffPhone.value='';dStaffPass.value='';openAdmin();toast('أهلاً بيك يا '+u.name);
 }
-function dashLogout(){dashSession=null;DBL.set('dashSession',null);closeDash();toast('تم تسجيل خروج اللوحة')}
+function dashLogout(){dashSession=null;sessionStorage.removeItem('sakr_dash');localStorage.removeItem('sakr_dashSession');closeDash();toast('تم تسجيل خروج اللوحة')}
 
 function renderDash(){
   if(!can(TABS.find(t=>t.k===activeTab).p)){activeTab='overview'}
@@ -940,11 +956,17 @@ function renderDash(){
     '<button class="'+(t.k===activeTab?'active':'')+'" onclick="switchTab(\''+t.k+'\')">'+t.l+'</button>'
   ).join('')+'<button onclick="dashLogout()" style="color:#c62828;margin-top:1rem">🚪 خروج من اللوحة</button>';
   const c=document.getElementById('dashContent');
-  ({overview:vOverview,bookings:vBookings,results:vResults,prices:vPrices,devices:vDevices,users:vUsers,content:vContent,settings:vSettings})[activeTab](c);
+  const views={overview:vOverview,bookings:vBookings,results:vResults,prices:vPrices,devices:vDevices,users:vUsers,customers:vCustomers,content:vContent,settings:vSettings};
+  (views[activeTab]||vOverview)(c);
 }
 function switchTab(k){activeTab=k;renderDash()}
 
 function vOverview(c){
+  if(!isMaster()){
+    const u=dashUser();
+    c.innerHTML='<div class="dash-card" style="text-align:center;padding:2.5rem"><div style="font-size:3rem">👋</div><h3>أهلاً بيك يا '+(u?esc(u.name):'')+'</h3><p class="hint" style="max-width:420px;margin-inline:auto">اختار من القايمة الجانبية المهام المتاحة ليك حسب صلاحياتك — لو محتاج صلاحية تانية كلم المشرف</p></div>';
+    return;
+  }
   var connStatus=FB.ready
     ?(FB.connected?'متصل بـ Firebase - البيانات بتتزامن لحظياً على كل الأجهزة':'Firebase مش متصل - راجع databaseURL وقواعد Realtime Database في الكونسول')
     :(FB.loadFailed?'ملفات Firebase مش بتحمل - جرّب نافذة تصفح خفي أو عطّل AdBlock (شوف تبويب Network)':'وضع التخزين المحلي - البيانات موجودة على الجهاز ده بس');
@@ -1318,6 +1340,7 @@ window.addEventListener('load',()=>setTimeout(()=>{
 initFirebase();applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals();
 if(dashSession)openAdmin();
 </script>
+<!-- مفتاح التوقيع — متحقن من Workflow، موجود هنا عشان ميتمسحش -->
 <script src="mtayea-signature.js"></script>
 </body>
 </html>
