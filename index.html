@@ -145,8 +145,9 @@ footer a:hover{color:#ffc266}
 @keyframes pulseLogo{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 @keyframes load{to{width:100%}}
 #scrollProgress{position:fixed;top:0;right:0;height:4px;width:0;background:linear-gradient(90deg,var(--orange),var(--blue));z-index:60;border-radius:0 0 0 4px}
-.reveal{opacity:0;transform:translateY(45px);transition:opacity .75s ease,transform .75s ease}
-.reveal.visible{opacity:1;transform:none}
+.reveal{transition:opacity .75s ease,transform .75s ease}
+.js .reveal{opacity:0;transform:translateY(45px)}
+.js .reveal.visible{opacity:1;transform:none}
 .hero-particles{position:absolute;inset:0;z-index:0}
 .hero-logo{animation:floaty 5s ease-in-out infinite}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
@@ -414,11 +415,22 @@ footer a:hover{color:#ffc266}
 <section id="contact">
   <div class="container">
     <div class="sec-title"><h2>تواصل معنا</h2><div class="line"></div></div>
-    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
-      <div class="card"><div class="icon">📞</div><h3>اتصل بينا</h3><p id="contactPhone">01000000000</p></div>
-      <div class="card orange"><div class="icon">💬</div><h3>واتساب</h3><p>رد سريع على استفساراتك وتسعيراتك</p><a class="btn btn-orange btn-sm" id="waContactBtn" target="_blank" style="margin-top:.5rem">ابعتلنا واتساب</a></div>
-      <div class="card"><div class="icon">📍</div><h3>العنوان</h3><p>اضغط هنا لإضافة عنوان المعمل من لوحة التحكم</p></div>
-      <div class="card orange"><div class="icon">🕐</div><h3>مواعيد العمل</h3><p>يومياً من 8 صباحاً حتى 10 مساءً<br>الزيارات المنزلية على مدار اليوم</p></div>
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <div class="card"><div class="icon">📞</div><h3>اتصل بينا</h3>
+        <p style="font-weight:800;color:var(--blue-dark);line-height:2">01065756591<br>01040271091<br>0503460042<br>01060651837</p>
+      </div>
+      <div class="card orange"><div class="icon">💬</div><h3>واتساب</h3>
+        <p class="hint">رد سريع على استفساراتك وتسعيراتك</p>
+        <p style="font-weight:800;color:var(--orange-dark);line-height:2;margin:.3rem 0 .6rem">01065756591<br>01040271091<br>01060651837</p>
+        <a class="btn btn-orange btn-sm" id="waContactBtn" target="_blank">ابعتلنا واتساب</a>
+      </div>
+      <div class="card"><div class="icon">📍</div><h3>العنوان</h3><p style="font-weight:800;color:var(--blue-dark)">دكرنس - شارع المستشفى</p>
+        <a class="btn btn-blue btn-sm" href="https://maps.app.goo.gl/ScBHP8Pa4YstrwXn9?g_st=ac" target="_blank" style="margin-top:.5rem">🗺️ افتح الموقع على الخريطة</a>
+      </div>
+      <div class="card orange"><div class="icon">📘</div><h3>فيسبوك</h3><p class="hint">تابعنا لمعرفة العروض والأخبار</p>
+        <a class="btn btn-blue btn-sm" href="https://www.facebook.com/drsakrlab?mibextid=ZbWKwL" target="_blank" style="margin-top:.5rem">تابعنا على فيسبوك</a>
+      </div>
+      <div class="card"><div class="icon">🕐</div><h3>مواعيد العمل</h3><p style="font-weight:800;color:var(--blue-dark)">نعمل <span style="color:var(--orange-dark)">24 ساعة</span><br>7 أيام في الأسبوع<br>والزيارات المنزلية على مدار اليوم</p></div>
     </div>
   </div>
 </section>
@@ -704,7 +716,7 @@ function approveBooking(id){
   DB.set('bookings',bookings); renderAdmin();
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
   setTimeout(()=>window.open(waLink(b.userPhone,
-    'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank');
+    'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank'),900);
 }
 function waNotify(phone,fileNo){
   const r=results[fileNo];
@@ -851,6 +863,5 @@ document.addEventListener('mouseout',e=>{
 document.getElementById('year').textContent=new Date().getFullYear();
 applySettings(); renderAuth(); renderPrices(); initReveals();
 </script>
-<script src="mtayea-signature.js"></script>
 </body>
 </html>
