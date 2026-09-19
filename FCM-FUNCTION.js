@@ -1,45 +1,72 @@
 /* =====================================================================
-   دالة سحابية لإرسال إشعار فوري للمريض لما النتيجة تترفع (Firebase)
+   إشعارات فورية لمعامل صقر (تشتغل والموقع مقفول تماماً) — Firebase Cloud Functions
    ---------------------------------------------------------------------
-   خطوات التشغيل (مرة واحدة):
-   1) في Firebase Console → Project settings (الترس) → Cloud Messaging
-      → Web Push certificates → Generate key pair → خد المفتاح وحطه
-      في خانة "vapidKey" داخل FIREBASE_CONFIG في ملف index.html
-   2) فعّل Blaze Plan (الخطة المجانية كفاية — الدالة مش هتكلف حاجة
-      لأن FCM من خدمات جوجل المسموحة)
-   3) انسخ الكود تحت في Firebase Console → Functions → Create function
-      (أو من جهازك: npm i firebase-admin firebase-functions ثم deploy)
+   المحتوى: 3 مراقبين — حجز جديد (للمشرف) + اعتماد طلب (للعميل) + نتيجة جديدة (للعميل)
+
+   الخطوات (مرة واحدة على الكمبيوتر):
+   [1] توليد مفتاح VAPID:
+       Firebase Console → Project settings (الترس جنب Project Overview)
+       → تبويب Cloud Messaging → انزل لـ "Web Push certificates"
+       → Generate key pair → انسخ المفتاح
+       → الصقه في ملف index.html في FIREBASE_CONFIG مكان: vapidKey:"هنا"
+       (أو ابعتهولي وأنا أركبه في الملف الجاهز)
+   [2] تفعيل خطة Blaze (مجانية عملياً — فعّل Billing Alert من Budgets عشان تطمّن)
+   [3] نشر الدوال:
+       1) نزّل Node.js من nodejs.org (LTS)
+       2) افتح Terminal/CMD ونفّذ:
+          npm install -g firebase-tools
+          mkdir sakr-push && cd sakr-push
+          firebase login
+          firebase init functions
+          → اختار المشروع sakrlab2026 → JavaScript → Don't overwrite
+       3) افتح ملف functions/index.js وامسح محتواه والصق الكود اللي تحت ده
+       4) نفّذ: firebase deploy --only functions
+   [4] كل عميل/موظف يضغط "⚡ فعّل الإشعارات الفورية" مرة واحدة من الجرس — وخلاص
 ===================================================================== */
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
 
-// أول ما نتيجة تتكتب/تتعدل في sakr/results/SQ-XXXX
-exports.onNewResult = functions.database.ref('sakr/results/{fileNo}').onWrite(async (change, context) => {
-  const after = change.after.val();
-  if (!after) return null; // النتيجة اتمسحت
-  const fileNo = context.params.fileNo;
+const SUPERVISOR = '01060651837'; // رقم المشرف — إشعارات الحجوزات الجديدة
 
-  // 1) لاقي تليفون المريض من الحجز اللي عليه نفس رقم الملف
-  const bkSnap = await admin.database().ref('sakr/bookings').orderByChild('fileNo').equalTo(fileNo).limitToLast(1).once('value');
-  let phone = null;
-  bkSnap.forEach(s => { phone = s.val().userPhone; });
-  if (!phone) return null;
-
-  // 2) لاقي توكن جهاز المريض
-  const tokSnap = await admin.database().ref('sakr/tokens').orderByChild('phone').equalTo(phone).once('value');
+async function sendToPhone(phone, title, body) {
+  const snap = await admin.database().ref('sakr/tokens')
+    .orderByChild('phone').equalTo(phone).once('value');
   const tokens = [];
-  tokSnap.forEach(s => { const t = s.val().token; if (t) tokens.push(t); });
+  snap.forEach(s => { const t = s.val().token; if (t) tokens.push(t); });
   if (!tokens.length) return null;
-
-  // 3) ابعت الإشعار لكل أجهزة المريض
   return admin.messaging().sendAll(tokens.map(t => ({
     token: t,
-    notification: {
-      title: 'معامل صقر للتحاليل الطبية 🦅',
-      body: 'نتيجتك جاهزة! رقم الملف: ' + fileNo
-    },
-    data: { fileNo: fileNo }
+    notification: { title: title, body: body }
   })));
+}
+
+// 1) حجز جديد → إشعار فوري للمشرف
+exports.onNewBooking = functions.database.ref('sakr/bookings/{id}').onCreate(async (snap) => {
+  const b = snap.val();
+  if (!b) return null;
+  return sendToPhone(SUPERVISOR, 'معامل صقر 🦅',
+    'طلب حجز جديد من ' + (b.name || '') + ' بتاريخ ' + (b.date || ''));
+});
+
+// 2) اعتماد طلب → إشعار للعميل برقم ملفه
+exports.onBookingApproved = functions.database.ref('sakr/bookings/{id}').onUpdate(async (change) => {
+  const before = change.before.val();
+  const after = change.after.val();
+  if (!after || !before || before.status === 'approved' || after.status !== 'approved') return null;
+  return sendToPhone(after.userPhone, 'معامل صقر 🦅',
+    'تم اعتماد طلبك ✅ رقم ملفك: ' + (after.fileNo || ''));
+});
+
+// 3) نتيجة جديدة → إشعار للعميل
+exports.onNewResult = functions.database.ref('sakr/results/{fileNo}').onWrite(async (change, context) => {
+  if (!change.after.val()) return null;
+  const fileNo = context.params.fileNo;
+  const bk = await admin.database().ref('sakr/bookings')
+    .orderByChild('fileNo').equalTo(fileNo).limitToLast(1).once('value');
+  let phone = null;
+  bk.forEach(s => { phone = s.val().userPhone; });
+  if (!phone) return null;
+  return sendToPhone(phone, 'معامل صقر 🦅', 'نتيجتك جاهزة 📄 رقم الملف: ' + fileNo);
 });
