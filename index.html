@@ -389,7 +389,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
         <div class="img-prev" id="bkImgPrev"><img id="bkImgEl" alt="الروشتة"><button onclick="clearBkImg()">✕</button></div>
         <p class="hint">بيتم رفع الصورة بأعلى جودة ممكنة تلقائياً.</p>
       </div>
-      <div class="field"><label>رقم الملف (لو عميل مستمر — اختياري)</label><input id="bkFile" placeholder="مثال: SQ-1001 — سيبه فاضي لو أول زيارة ليك"></div>
+      <div class="field"><label>رقم الملف (لو عميل مستمر — اختياري)</label><input id="bkFile" placeholder="مثال: SL-2001 — سيبه فاضي لو أول زيارة ليك"></div>
       <div class="field"><label>ملاحظات إضافية (اختياري)</label><input id="bkNotes" placeholder="أي تفاصيل تساعدنا نخدمك أحسن"></div>
       <button class="btn btn-orange" style="width:100%" onclick="submitBooking()">إرسال طلب الحجز</button>
       <p class="hint" style="margin-top:.6rem">بعد إرسال الطلب، المعمل يراجعه ويوافق عليه، وبيتم إرسال <b>رقم الملف</b> الخاص بيك على واتساب — ده الرقم اللي هتستلم بيه نتيجتك.</p>
@@ -442,7 +442,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <div class="sec-title"><h2>استلام النتائج</h2><div class="line"></div></div>
     <p class="sec-sub" data-site="resultsSub">أدخل رقم الملف اللي وصلك على واتساب لما المعمل وافق على طلبك</p>
     <div class="panel" style="max-width:560px;margin-inline:auto">
-      <div class="field"><label>رقم الملف</label><input id="resFileNo" placeholder="مثال: SQ-1001"></div>
+      <div class="field"><label>رقم الملف</label><input id="resFileNo" placeholder="مثال: SL-2001"></div>
       <button class="btn btn-blue" style="width:100%" onclick="checkResult()">بحث عن النتيجة</button>
       <div id="resOut" style="margin-top:1.2rem"></div>
       <p class="hint" style="margin-top:.8rem">لو نسيت رقم الملف، ابعتلنا على واتساب برقم تليفونك وهنرد عليك فوراً.</p>
@@ -1053,9 +1053,9 @@ function vOverview(c){
   '<div class="dash-card"><h3>حالة الاتصال</h3><p class="hint" style="font-weight:800;font-size:.95rem">'+connStatus+'</p></div>';
 }
 function nextFileNo(){
-  let n=1000+bookings.filter(b=>b.fileNo).length;
-  let no='SQ-'+n;
-  while(bookings.some(b=>b.fileNo===no)){n++;no='SQ-'+n}
+  let n=2000+bookings.filter(b=>b.fileNo).length;
+  let no='SL-'+n;
+  while(bookings.some(b=>b.fileNo===no)){n++;no='SL-'+n}
   return no;
 }
 function vBookings(c){
@@ -1098,7 +1098,7 @@ function vResults(c){
     const fileCell=r.link?'<a href="'+esc(r.link)+'" target="_blank">لينك</a>':esc(r.name||'ملف مرفوع')+' ('+(r.type==='pdf'?'PDF':'صورة')+')';
     return '<tr><td><b>'+esc(no)+'</b></td><td>'+fileCell+'</td><td>'+esc(r.date||'')+'</td><td><button class="btn btn-danger btn-sm" onclick="delResult(\''+no+'\')">حذف</button></td></tr>'}).join('');
   c.innerHTML='<div class="dash-card"><h3>📤 رفع نتيجة جديدة (ملف بدل اللينك)</h3>'+
-  '<div class="grid2"><div class="field"><label>رقم الملف</label><input id="adFileNo" placeholder="SQ-1001"></div>'+
+  '<div class="grid2"><div class="field"><label>رقم الملف</label><input id="adFileNo" placeholder="SL-2001"></div>'+
   '<div class="field"><label>ملف النتيجة (PDF أو صورة)</label><input type="file" id="resFileUp" accept="application/pdf,image/*"></div></div>'+
   '<button class="btn btn-blue btn-sm" onclick="addResult()">💾 حفظ النتيجة وإرسال إشعار واتساب</button>'+
   '<p class="hint" style="margin-top:.4rem">الـ PDF حد أقصاه 1.5 ميجا — والصور بتتضغط تلقائياً بأعلى جودة.</p></div>'+
