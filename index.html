@@ -346,6 +346,10 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
   </div>
 </section>
 
+<section id="videoSec" style="background:#eaf4fb;padding-top:3rem">
+  <div class="container"><div id="videoWrap"></div></div>
+</section>
+
 <section id="booking" style="background:#eaf4fb">
   <div class="container">
     <div class="sec-title"><h2>حجز زيارة منزلية لسحب العينة</h2><div class="line"></div></div>
@@ -668,6 +672,8 @@ const SITE_DEFAULT={
   address:'دكرنس - شارع المستشفى',
   mapLink:'https://maps.app.goo.gl/ScBHP8Pa4YstrwXn9?g_st=ac',
   facebook:'https://www.facebook.com/drsakrlab?mibextid=ZbWKwL',
+  videoUrl:'',
+  videoData:'',
   hours:'نعمل 24 ساعة\n7 أيام في الأسبوع\nوالزيارات المنزلية على مدار اليوم'
 };
 const DEVICES_DEFAULT=[
@@ -727,6 +733,7 @@ function renderSite(){
   document.getElementById('mapBtn').href=site.mapLink;
   document.getElementById('fbBtn').href=site.facebook;
   document.getElementById('hoursTxt').innerHTML=esc(site.hours).replace(/\n/g,'<br>');
+  renderVideo();
 }
 
 /* ================= Devices (public) ================= */
@@ -778,7 +785,12 @@ function doLogin(){
   if(!u)return toast('رقم التليفون أو كلمة المرور غلط',true);
   stats.logins++;DBL.set('stats',stats);logAct('\uD83D\uDD11 '+u.name+' سجل دخول للموقع');
   session=u.phone;DBL.set('session',session);
-  closeModal('authModal');renderAuth();toast('أهلاً بيك تاني يا '+u.name);
+  closeModal('authModal');renderAuth();toast('أهلاً بيك تاني يا'+u.name);
+  if(u.role==='staff'){
+    dashSession={type:'staff',phone:u.phone};
+    sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));
+    openAdmin();toast('👋 ده حساب موظف — فتحنالك اللوحة على طول');
+  }
 }
 function logout(){if(!confirm('عايز تسجل خروج؟'))return;session=null;DBL.set('session',null);renderAuth();toast('تم تسجيل الخروج')}
 function currentUser(){return users.find(u=>u.phone===session)}
@@ -1096,7 +1108,7 @@ function vBookings(c){
     '<td><b>'+esc(b.name)+'</b><br><span class="hint">'+esc(b.userPhone)+' — '+esc(b.addr)+'</span>'+(b.notes?'<br><span class="hint">📝 '+esc(b.notes)+'</span>':'')+(b.img?'<br><a href="'+b.img+'" target="_blank">📷 صورة الروشتة</a>':'')+'</td>'+
     '<td>'+esc(b.date)+'<br><span class="hint">'+esc(b.time)+'</span></td>'+
     '<td style="max-width:200px">'+esc(b.tests)+'</td>'+
-    '<td>'+(b.status==='approved'?'<span class="badge b-ok">'+esc(b.fileNo)+'</span>':'<span class="badge b-wait">قيد المراجعة</span>')+'</td>'+
+    '<td>'+(b.status==='approved'?'<span class="badge b-ok">'+esc(b.fileNo)+'</span><br><span class="hint">بواسطة: '+esc(b.by||'—')+'</span>':'<span class="badge b-wait">قيد المراجعة</span>')+'</td>'+
     '<td style="white-space:nowrap">'+(b.status==='approved'
       ? '<button class="btn btn-blue btn-sm" onclick="waNotify(\''+b.userPhone+'\',\''+b.fileNo+'\')">واتساب</button>'
       : '<button class="btn btn-orange btn-sm" onclick="approveBooking('+b.id+')">اعتماد + رقم ملف</button>')+
@@ -1112,11 +1124,12 @@ function approveBooking(id){
     no=prev?prev.fileNo:nextFileNo();
   }
   b.status='approved';b.fileNo=no;
+  b.by=isMaster()?'المدير':(dashUser()?dashUser().name:'المدير');
   logAct('\u2705 اعتماد الطلب '+b.fileNo+' — '+b.name);
   DBL.set('bookings',bookings);renderDash();
   pushNotif(b.userPhone,'✅ تم اعتماد طلب الزيارة بتاريخ '+b.date+' — رقم ملفك: '+b.fileNo,'#booking');
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
-  setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank'),900);
+  setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.\n— الموظف: '+b.by),'_blank'),900);
 }
 function delBooking(id){if(!confirm('تحذف الطلب ده نهائياً؟'))return;bookings=bookings.filter(b=>b.id!==id);DBL.set('bookings',bookings);renderDash();toast('تم حذف الطلب')}
 function waNotify(phone,fileNo){
@@ -1150,7 +1163,8 @@ async function addResult(){
     name=f.name;type='pdf';
   }else return toast('الملف لازم يكون PDF أو صورة',true);
   const entries=resultList(no);
-  entries.push({data,name,type,date:new Date().toLocaleString('ar-EG'),addedAt:Date.now()});
+  const upBy=isMaster()?'المدير':(dashUser()?dashUser().name:'المدير');
+  entries.push({data,name,type,date:new Date().toLocaleString('ar-EG'),addedAt:Date.now(),uploadedBy:upBy});
   results[no]={entries};
   DBL.set('results',results);
   logAct('\uD83D\uDCC4 نتيجة مرفوعة للملف '+no);
@@ -1159,7 +1173,7 @@ async function addResult(){
   toast('النتيجة اترفعت — بعت إشعار واتساب للعميل');
   if(b){
     pushNotif(b.userPhone,'📄 نتيجة جديدة جاهزة — رقم ملفك: '+no+' ('+name+')','#results');
-    setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج"'),'_blank'),400);
+    setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج"\n— الموظف: '+upBy),'_blank'),400);
   }
 }
 function delResult(no){if(!confirm('تحذف نتيجة '+no+'؟'))return;delete results[no];DBL.set('results',results);renderDash();toast('تم الحذف')}
@@ -1297,8 +1311,13 @@ function addUser(){
     u.name=n;u.phone=p;u.pass=pw;u.perms=perms;u.active=active;
     editUserIdx=-1;
   }else{
-    if(users.some(u=>u.phone===p))return toast('الرقم مسجل قبل كده',true);
-    users.push({name:n,phone:p,addr:'',pass:pw,role:'staff',perms,active});
+    const ex=users.find(x=>x.phone===p);
+    if(ex){
+      ex.name=n;ex.pass=pw;ex.role='staff';ex.perms=perms;ex.active=active;
+      toast('ℹ️ الرقم كان حساب عميل — اتحوّل لموظف وبياناته محفوظة');
+    }else{
+      users.push({name:n,phone:p,addr:'',pass:pw,role:'staff',perms,active});
+    }
   }
   DBL.set('users',users);renderDash();toast('تم الحفظ ✅');
 }
@@ -1347,7 +1366,7 @@ function toggleUser(i){users[i].active=users[i].active===false?true:false;DBL.se
 function delUser(i){if(!confirm('تحذف '+users[i].name+' نهائياً؟'))return;users.splice(i,1);DBL.set('users',users);renderDash();toast('تم الحذف')}
 
 /* Content admin */
-const SITE_FIELDS=[['heroTag','العنوان الرئيسي في الهيرو (السطر البرتقالي)'],['heroText','النص اللي بيتكتب لوحده في الهيرو'],['servicesSub','وصف قسم خدماتنا'],['devicesSub','وصف قسم الأجهزة'],['bookingSub','وصف قسم الحجز'],['pricesSub','وصف قسم الأسعار'],['resultsSub','وصف قسم النتائج'],['contactSub','وصف قسم التواصل'],['address','العنوان'],['mapLink','لينك الخريطة (Google Maps)'],['facebook','لينك صفحة الفيسبوك'],['hours','مواعيد العمل (كل سطر في سطر)']];
+const SITE_FIELDS=[['heroTag','العنوان الرئيسي في الهيرو (السطر البرتقالي)'],['heroText','النص اللي بيتكتب لوحده في الهيرو'],['servicesSub','وصف قسم خدماتنا'],['devicesSub','وصف قسم الأجهزة'],['bookingSub','وصف قسم الحجز'],['pricesSub','وصف قسم الأسعار'],['resultsSub','وصف قسم النتائج'],['contactSub','وصف قسم التواصل'],['address','العنوان'],['mapLink','لينك الخريطة (Google Maps)'],['facebook','لينك صفحة الفيسبوك'],['videoUrl','لينك فيديو المعمل (يوتيوب أو فيسبوك) — سيبه فاضي لو هترفع ملف']['hours','مواعيد العمل (كل سطر في سطر)']];
 function vContent(c){
   c.innerHTML='<div class="dash-card"><h3>📝 تعديل محتوى الموقع (الشروحات والنصوص)</h3>'+
   SITE_FIELDS.map(f=>'<div class="field"><label>'+f[1]+'</label>'+
@@ -1355,6 +1374,7 @@ function vContent(c){
     :'<input id="st_'+f[0]+'" value="'+esc(site[f[0]])+'">')+'</div>').join('')+
   '<div class="field"><label>أرقام التليفونات (كل رقم في سطر)</label><textarea id="st_phones" rows="4">'+esc(site.phones.join('\n'))+'</textarea></div>'+
   '<div class="field"><label>أرقام الواتساب (كل رقم في سطر)</label><textarea id="st_whats" rows="3">'+esc(site.whats.join('\n'))+'</textarea></div>'+
+  '<div class="field"><label>أو ارفع فيديو MP4 من جهازك (حد أقصى 4 ميجا)</label><input type="file" id="st_videoFile" accept="video/mp4"></div><button class="btn btn-ghost btn-sm" onclick="saveVideoFile()">🎬 رفع الفيديو من الجهاز</button> <button class="btn btn-ghost btn-sm" onclick="clearVideo()">🗑️ مسح الفيديو</button>'+
   '<button class="btn btn-blue" onclick="saveSite()">💾 حفظ المحتوى</button></div>';
 }
 function saveSite(){
@@ -1391,12 +1411,12 @@ function logAct(msg){
 }
 function vActivity(c){
   const files=bookings.filter(b=>b.fileNo).length;
-  const st=(v,l)=>'<div class="admin-stat"><b>'+v+'</b><span>'+l+'</span></div>';
+  const st=(v,l,t)=>'<div class="admin-stat" style="cursor:pointer;transition:.2s" onclick="switchTab(\''+t+'\')" title="اضغط للفتح"><b>'+v+'</b><span>'+l+'</span></div>';
   c.innerHTML='<div class="admin-stats">'+
-  st(stats.visits,'زيارة للموقع')+st(stats.signups,'حساب جديد')+st(stats.logins,'تسجيل دخول')+
-  st(bookings.length,'طلب سحب')+st(files,'حالة برقم ملف')+
-  st(users.filter(u=>u.role!=='staff').length,'عميل مسجل')+st(users.filter(u=>u.role==='staff').length,'موظف')+
-  st(chats.filter(x=>x.from==='customer').length,'رسالة واردة')+'</div>'+
+  st(stats.visits,'زيارة للموقع','activity')+st(stats.signups,'حساب جديد','activity')+st(stats.logins,'تسجيل دخول','activity')+
+  st(bookings.length,'طلب سحب','bookings')+st(files,'حالة برقم ملف','bookings')+
+  st(users.filter(u=>u.role!=='staff').length,'عميل مسجل','customers')+st(users.filter(u=>u.role==='staff').length,'موظف','users')+
+  st(chats.filter(x=>x.from==='customer').length,'رسالة واردة','chats')+'</div>'+
   '<div class="dash-card"><h3>📜 سجل النشاط (آخر 50 حدث) — بيتحدث لحظياً</h3>'+
   (activity.length?activity.slice(0,50).map(a=>'<div class="notif-item"><span class="hint">'+new Date(a.ts).toLocaleString('ar-EG')+'</span><br>'+esc(a.msg)+'</div>').join(''):'<p class="hint">لا يوجد نشاط بعد</p>')+'</div>';
 }
@@ -1473,6 +1493,30 @@ function staffSend(){
   chats.push({id:Date.now(),from:'staff',phone:chatThread,name:'إدارة المعمل',msg:m,ts:Date.now(),rs:true,rc:false});
   DBL.set('chats',chats);renderDash();
 }
+function renderVideo(){
+  const w=document.getElementById('videoWrap');if(!w)return;
+  let inner='';
+  if(site.videoData){
+    inner='<video controls preload="metadata" style="width:100%;max-height:440px;border-radius:18px;box-shadow:0 20px 50px rgba(11,94,156,.25)" poster="logo.jpeg"><source src="'+site.videoData+'" type="video/mp4"></video>';
+  }else if(site.videoUrl){
+    let src='';
+    const m=site.videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+    if(m)src='https://www.youtube.com/embed/'+m[1];
+    else if(site.videoUrl.indexOf('facebook.com')>-1)src='https://www.facebook.com/plugins/video.php?href='+encodeURIComponent(site.videoUrl)+'&show_text=false';
+    if(src)inner='<iframe src="'+src+'" style="width:100%;aspect-ratio:16/9;border:none;border-radius:18px;box-shadow:0 20px 50px rgba(11,94,156,.25)" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>';
+  }
+  w.innerHTML=inner?'<div class="sec-title reveal visible"><h2>🎬 فيديو المعمل</h2><div class="line"></div></div><div style="max-width:820px;margin-inline:auto">'+inner+'</div>':'';
+}
+function saveVideoFile(){
+  const f=document.getElementById('st_videoFile').files[0];
+  if(!f)return toast('اختار ملف فيديو MP4',true);
+  if(f.size>4*1024*1024)return toast('الفيديو أكبر من 4 ميجا — قصّره أو ارفعه على يوتيوب وحط اللينك',true);
+  const r=new FileReader();
+  r.onload=e=>{site.videoData=e.target.result;DBL.set('site',site);renderVideo();toast('🎬 الفيديو اترفع وبيظهر في الموقع')};
+  r.readAsDataURL(f);
+}
+function clearVideo(){site.videoData='';DBL.set('site',site);renderVideo();toast('🗑️ الفيديو اتمسح')}
+
 /* ================= WOW Effects ================= */
 window.addEventListener('load',()=>setTimeout(()=>document.getElementById('preloader').classList.add('done'),1300));
 window.addEventListener('scroll',()=>{
