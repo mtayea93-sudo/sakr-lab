@@ -404,6 +404,16 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <h3 style="color:var(--blue-dark);margin-bottom:1rem">📋 طلباتي</h3>
       <div id="myBookingsList"></div>
     </div>
+
+    <div id="changePassWrap" class="panel" style="display:none;max-width:720px;margin-inline:auto;margin-top:1.5rem">
+      <h3 style="color:var(--blue-dark);margin-bottom:1rem">🔒 تغيير كلمة المرور</h3>
+      <div class="grid2">
+        <div class="field"><label>كلمة المرور الحالية</label><input type="password" id="cpOld"></div>
+        <div class="field"><label>كلمة المرور الجديدة</label><input type="password" id="cpNew"></div>
+      </div>
+      <div class="field"><label>تأكيد كلمة المرور الجديدة</label><input type="password" id="cpNew2"></div>
+      <button class="btn btn-blue btn-sm" onclick="changePass()">💾 حفظ كلمة المرور الجديدة</button>
+    </div>
   </div>
 </section>
 
@@ -773,9 +783,9 @@ function doLogin(){
 function logout(){if(!confirm('عايز تسجل خروج؟'))return;session=null;DBL.set('session',null);renderAuth();toast('تم تسجيل الخروج')}
 function currentUser(){return users.find(u=>u.phone===session)}
 /* ===== إشعارات التطبيق + جرس الإشعارات ===== */
-function pushNotif(phone,msg){
+function pushNotif(phone,msg,url){
   const nf=DBL.get('notifs',{});const arr=nf[phone]||[];
-  arr.unshift({msg,ts:Date.now()});nf[phone]=arr.slice(0,30);DBL.set('notifs',nf);
+  arr.unshift({msg,ts:Date.now(),url:url||''});nf[phone]=arr.slice(0,30);DBL.set('notifs',nf);
   if(session===phone){renderBell();toast(msg)}
 }
 function renderBell(){
@@ -796,11 +806,18 @@ function toggleNotifs(ev){
   const arr=(DBL.get('notifs',{})[session])||[];
   localStorage.setItem('sakr_seen_'+session,Date.now());renderBell();
   d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><b style="color:var(--blue-dark)">'+(session===SUP_PHONE?'🔔 إشعارات النظام':'🔔 الإشعارات')+'</b><button onclick="closeNotifs()" style="background:#f0f4f8;border:none;width:26px;height:26px;border-radius:8px;cursor:pointer;font-weight:900">✕</button></div>'+
-    (arr.length?arr.slice(0,10).map(n=>'<div class="notif-item">'+esc(n.msg)+'<br><span class="hint">'+new Date(n.ts).toLocaleString('ar-EG')+'</span></div>').join(''):'<p class="hint" style="text-align:center;padding:.6rem 0">🔕 لا توجد إشعارات حتى الآن — هتوصلك هنا لما يتم اعتماد طلبك أو جهزت نتيجتك</p>')+
+    (arr.length?arr.slice(0,10).map(n=>'<div class="notif-item" style="cursor:pointer;'+(n.url?'':'opacity:.75')+'" onclick="openNotifUrl(\''+(n.url||'')+'\')">'+esc(n.msg)+'<br><span class="hint">'+new Date(n.ts).toLocaleString('ar-EG')+' '+(n.url?'— <b>اضغط للانتقال \u2190</b>':'')+'</span></div>').join(''):'<p class="hint" style="text-align:center;padding:.6rem 0">🔕 لا توجد إشعارات حتى الآن — هتوصلك هنا لما يتم اعتماد طلبك أو جهزت نتيجتك</p>')+
     '<button class="btn btn-orange btn-sm" style="width:100%;margin-top:.5rem" onclick="enablePush()">⚡ فعّل الإشعارات الفورية (توصل حتى والموقع مقفول)</button>';
   d.classList.add('open');
 }
 function closeNotifs(){const d=document.getElementById('notifDrop');if(d)d.classList.remove('open')}
+function openNotifUrl(u){
+  closeNotifs();
+  if(!u)return;
+  if(u.charAt(0)==='#'){location.hash=u;return}
+  sessionStorage.setItem('sakr_pend_tab',u);
+  openAdmin();
+}
 document.addEventListener('click',e=>{
   const d=document.getElementById('notifDrop');
   if(d&&d.classList.contains('open')&&!e.target.closest('#notifDrop')&&!e.target.closest('#bellBtn'))d.classList.remove('open');
@@ -840,11 +857,13 @@ function renderAuth(){
     document.getElementById('bkName').value=u.name;
     document.getElementById('bkPhone').value=u.phone;
     renderMyBookings();
+    document.getElementById('changePassWrap').style.display='block';
   }else{
     badge.style.display='none';btn.style.display='inline-flex';
     document.getElementById('bookingLoginGate').style.display='block';
     document.getElementById('bookingFormWrap').style.display='none';
     document.getElementById('myBookingsWrap').style.display='none';
+    document.getElementById('changePassWrap').style.display='none';
   }
   renderBell();chatFabBadge();
 }
@@ -890,6 +909,17 @@ function renderMyBookings(){
     (b.fileNo?'<span class="badge b-ok">رقم الملف: '+esc(b.fileNo)+'</span>':'<span class="badge b-wait">قيد المراجعة</span>')+
     '</div><p style="color:var(--muted);font-size:.9rem;margin-top:.4rem">التحاليل: '+esc(b.tests)+'</p></div>'
   ).join('');
+}
+
+function changePass(){
+  const u=currentUser();if(!u)return toast('سجل دخولك الأول',true);
+  const o=document.getElementById('cpOld').value,p1=document.getElementById('cpNew').value,p2=document.getElementById('cpNew2').value;
+  if(o!==u.pass)return toast('كلمة المرور الحالية غلط',true);
+  if(p1.length<4)return toast('كلمة المرور الجديدة لازم 4 أحرف على الأقل',true);
+  if(p1!==p2)return toast('كلمتي المرور الجديدتين غير متطابقتين',true);
+  u.pass=p1;DBL.set('users',users);
+  document.getElementById('cpOld').value='';document.getElementById('cpNew').value='';document.getElementById('cpNew2').value='';
+  toast('🔒 كلمة المرور اتحغيرت بنجاح — استخدمها في المرة الجاية');
 }
 
 /* ================= Prices (selection + total) ================= */
@@ -1020,6 +1050,8 @@ function dashLoginStaff(){
 function dashLogout(){dashSession=null;sessionStorage.removeItem('sakr_dash');localStorage.removeItem('sakr_dashSession');closeDash();toast('تم تسجيل خروج اللوحة')}
 
 function renderDash(){
+  const pend=sessionStorage.getItem('sakr_pend_tab');
+  if(pend){sessionStorage.removeItem('sakr_pend_tab');activeTab=pend}
   if(!can(TABS.find(t=>t.k===activeTab).p)){activeTab='overview'}
   const who=isMaster()?'المدير':(dashUser()?dashUser().name:'');
   document.getElementById('dashWho').textContent='مسجل كـ: '+who;
@@ -1082,7 +1114,7 @@ function approveBooking(id){
   b.status='approved';b.fileNo=no;
   logAct('\u2705 اعتماد الطلب '+b.fileNo+' — '+b.name);
   DBL.set('bookings',bookings);renderDash();
-  pushNotif(b.userPhone,'✅ تم اعتماد طلب الزيارة بتاريخ '+b.date+' — رقم ملفك: '+b.fileNo);
+  pushNotif(b.userPhone,'✅ تم اعتماد طلب الزيارة بتاريخ '+b.date+' — رقم ملفك: '+b.fileNo,'#booking');
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
   setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.'),'_blank'),900);
 }
@@ -1126,7 +1158,7 @@ async function addResult(){
   adFileNo.value='';document.getElementById('resFileUp').value='';renderDash();
   toast('النتيجة اترفعت — بعت إشعار واتساب للعميل');
   if(b){
-    pushNotif(b.userPhone,'📄 نتيجة جديدة جاهزة — رقم ملفك: '+no+' ('+name+')');
+    pushNotif(b.userPhone,'📄 نتيجة جديدة جاهزة — رقم ملفك: '+no+' ('+name+')','#results');
     setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nرقم ملفك: '+no+'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج"'),'_blank'),400);
   }
 }
@@ -1350,8 +1382,10 @@ function saveSettings(){
 const SUP_PHONE='01060651837';
 function logAct(msg){
   activity.unshift({ts:Date.now(),msg});activity=activity.slice(0,100);DBL.set('activity',activity);
+  const tag=msg.slice(0,2);
+  const nurl=tag==='🆕'?'customers':tag==='🔑'?'activity':tag==='📋'?'bookings':tag==='✅'?'bookings':tag==='📄'?'results':tag==='💬'?'chats':'activity';
   const nf=DBL.get('notifs',{});const arr=nf[SUP_PHONE]||[];
-  arr.unshift({msg,ts:Date.now()});nf[SUP_PHONE]=arr.slice(0,50);DBL.set('notifs',nf);
+  arr.unshift({msg,ts:Date.now(),url:nurl});nf[SUP_PHONE]=arr.slice(0,50);DBL.set('notifs',nf);
   if(session===SUP_PHONE){renderBell();toast(msg)}
   const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open')&&activeTab==='activity')renderDash();
 }
