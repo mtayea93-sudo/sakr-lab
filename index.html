@@ -1366,7 +1366,7 @@ function toggleUser(i){users[i].active=users[i].active===false?true:false;DBL.se
 function delUser(i){if(!confirm('تحذف '+users[i].name+' نهائياً؟'))return;users.splice(i,1);DBL.set('users',users);renderDash();toast('تم الحذف')}
 
 /* Content admin */
-const SITE_FIELDS=[['heroTag','العنوان الرئيسي في الهيرو (السطر البرتقالي)'],['heroText','النص اللي بيتكتب لوحده في الهيرو'],['servicesSub','وصف قسم خدماتنا'],['devicesSub','وصف قسم الأجهزة'],['bookingSub','وصف قسم الحجز'],['pricesSub','وصف قسم الأسعار'],['resultsSub','وصف قسم النتائج'],['contactSub','وصف قسم التواصل'],['address','العنوان'],['mapLink','لينك الخريطة (Google Maps)'],['facebook','لينك صفحة الفيسبوك'],['videoUrl','لينك فيديو المعمل (يوتيوب أو فيسبوك) — سيبه فاضي لو هترفع ملف']['hours','مواعيد العمل (كل سطر في سطر)']];
+const SITE_FIELDS=[['heroTag','العنوان الرئيسي في الهيرو (السطر البرتقالي)'],['heroText','النص اللي بيتكتب لوحده في الهيرو'],['servicesSub','وصف قسم خدماتنا'],['devicesSub','وصف قسم الأجهزة'],['bookingSub','وصف قسم الحجز'],['pricesSub','وصف قسم الأسعار'],['resultsSub','وصف قسم النتائج'],['contactSub','وصف قسم التواصل'],['address','العنوان'],['mapLink','لينك الخريطة (Google Maps)'],['facebook','لينك صفحة الفيسبوك'],['videoUrl','لينك فيديو المعمل (يوتيوب أو فيسبوك) — سيبه فاضي لو هترفع ملف'],['hours','مواعيد العمل (كل سطر في سطر)']];
 function vContent(c){
   c.innerHTML='<div class="dash-card"><h3>📝 تعديل محتوى الموقع (الشروحات والنصوص)</h3>'+
   SITE_FIELDS.map(f=>'<div class="field"><label>'+f[1]+'</label>'+
