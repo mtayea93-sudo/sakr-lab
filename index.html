@@ -645,6 +645,12 @@ const DBL={
   set:(k,v)=>{const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){/* مساحة الجهاز ممتلئة — السحابة هتحفظ والمزامنة هترجعها */}if(FB.ready){try{FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
 };
 const FB={ready:false,db:null,connected:false,loadFailed:false};
+function applyCloudData(k,v){
+  if(k==='users')users=v;else if(k==='bookings')bookings=v;else if(k==='prices')prices=v;
+  else if(k==='results')results=v;else if(k==='devices')devices=v;else if(k==='site')site=v;
+  else if(k==='settings')settings=v;else if(k==='chats')chats=v;else if(k==='stats')stats=v;
+  else if(k==='activity')activity=v;else if(k==='notifs'){/* الجرس بيقرا من DBL مباشرة */}
+}
 function initFirebase(){
   if(!FIREBASE_CONFIG.apiKey)return;
   if(typeof firebase==='undefined'){
@@ -663,7 +669,7 @@ function initFirebase(){
         const mt=parseInt(localStorage.getItem('sakr_mt_'+k)||'0');
         if(v&&typeof v==='object'&&'d' in v){
           /* بيانات سحابية بتوقيت: الأحدث يكسب */
-          if(v.t>mt){localStorage.setItem('sakr_'+k,JSON.stringify(v.d));localStorage.setItem('sakr_mt_'+k,v.t);refreshAll()}
+          if(v.t>mt){localStorage.setItem('sakr_'+k,JSON.stringify(v.d));localStorage.setItem('sakr_mt_'+k,v.t);applyCloudData(k,v.d);refreshAll()}
           else if(v.t<mt){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(localStorage.getItem('sakr_'+k))})}catch(e){}}
         }else if(v==null){
           /* السحابة فاضية: ارفع المحلي لو فيه بيانات فعلاً */
@@ -679,6 +685,7 @@ function initFirebase(){
             /* المحلي فاضي: خد النسخة السحابية القديمة واحفظها محلياً */
             localStorage.setItem('sakr_'+k,JSON.stringify(v));
             localStorage.setItem('sakr_mt_'+k,Date.now());
+            applyCloudData(k,v);
             refreshAll();
           }
         }
