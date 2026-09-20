@@ -653,12 +653,21 @@ function initFirebase(){
           if(v.t>mt){localStorage.setItem('sakr_'+k,JSON.stringify(v.d));localStorage.setItem('sakr_mt_'+k,v.t);refreshAll()}
           else if(v.t<mt){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(localStorage.getItem('sakr_'+k))})}catch(e){}}
         }else if(v==null){
-          /* السحابة فاضية: ارفع المحلي (بتوعيته) */
+          /* السحابة فاضية: ارفع المحلي لو فيه بيانات فعلاً */
           const local=localStorage.getItem('sakr_'+k);
-          if(local){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(local)})}catch(e){}}
+          if(local&&local!=='null'&&local!=='[]'&&local!=='{}'){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(local)})}catch(e){}}
         }else{
-          /* قيمة سحابية قديمة بدون توقيت: المحلي الأحدث يكسب ويرفع نفسه */
-          try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(localStorage.getItem('sakr_'+k))})}catch(e){}
+          /* قيمة سحابية قديمة بدون توقيت */
+          const local=localStorage.getItem('sakr_'+k);
+          if(local&&local!=='null'&&local!=='[]'&&local!=='{}'){
+            /* المحلي فيه بيانات: ارفعه بتوعيته */
+            try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(local)})}catch(e){}
+          }else{
+            /* المحلي فاضي: خد النسخة السحابية القديمة واحفظها محلياً */
+            localStorage.setItem('sakr_'+k,JSON.stringify(v));
+            localStorage.setItem('sakr_mt_'+k,Date.now());
+            refreshAll();
+          }
         }
       });
     });
