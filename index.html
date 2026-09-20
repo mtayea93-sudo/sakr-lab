@@ -276,13 +276,13 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <div class="brand-name">معامل صقر للتحاليل الطبية<small>دقة تثق بها .. وسرعة تلاحقها</small></div>
     </a>
     <div class="nav-links">
-      <a href="#home">الرئيسية</a>
-      <a href="#services">خدماتنا</a>
-      <a href="#devices">أجهزتنا</a>
-      <a href="#booking">حجز زيارة منزلية</a>
-      <a href="#prices">قائمة الأسعار</a>
-      <a href="#results">استلام النتائج</a>
-      <a href="#contact">تواصل معنا</a>
+      <a href="#home" onclick="document.getElementById('mobileMenu').style.display='none'">الرئيسية</a>
+      <a href="#services" onclick="document.getElementById('mobileMenu').style.display='none'">خدماتنا</a>
+      <a href="#devices" onclick="document.getElementById('mobileMenu').style.display='none'">أجهزتنا</a>
+      <a href="#booking" onclick="document.getElementById('mobileMenu').style.display='none'">حجز زيارة منزلية</a>
+      <a href="#prices" onclick="document.getElementById('mobileMenu').style.display='none'">قائمة الأسعار</a>
+      <a href="#results" onclick="document.getElementById('mobileMenu').style.display='none'">استلام النتائج</a>
+      <a href="#contact" onclick="document.getElementById('mobileMenu').style.display='none'">تواصل معنا</a>
       <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62828;font-weight:900">📢 للشكاوى</a>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center">
@@ -301,7 +301,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <a href="#prices">قائمة الأسعار</a>
     <a href="#results">استلام النتائج</a>
     <a href="#contact">تواصل معنا</a>
-    <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62823;font-weight:900">📢 للشكاوى</a>
+    <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62823;font-weight:900" onclick="document.getElementById('mobileMenu').style.display='none'">📢 للشكاوى</a>
   </div>
 </nav>
 
@@ -629,7 +629,7 @@ const FIREBASE_CONFIG={
 /* ================= Data Layer ================= */
 const DBL={
   get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem('sakr_'+k));return v==null?d:v}catch(e){return d}},
-  set:(k,v)=>{localStorage.setItem('sakr_'+k,JSON.stringify(v));if(FB.ready){try{FB.db.ref('sakr/'+k).set(v)}catch(e){}}}
+  set:(k,v)=>{const t=Date.now();localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t);if(FB.ready){try{FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
 };
 const FB={ready:false,db:null,connected:false,loadFailed:false};
 function initFirebase(){
@@ -643,16 +643,23 @@ function initFirebase(){
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
     ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(k=>{
+      /* بيانات محلية قديمة (قبل نظام الطوابع): اعتبرها "معدّلة دلوقتي" عشان متتبدلش بنسخة قديمة من السحابة */
+      if(!localStorage.getItem('sakr_mt_'+k))localStorage.setItem('sakr_mt_'+k,localStorage.getItem('sakr_'+k)?Date.now():0);
       FB.db.ref('sakr/'+k).on('value',s=>{
         const v=s.val();
-        if(v==null){
-          /* السحابة فاضية: ارفع نسخة البيانات المحلية مرة واحدة (زرع أولي) — ومتمسحش المحلي أبداً */
+        const mt=parseInt(localStorage.getItem('sakr_mt_'+k)||'0');
+        if(v&&typeof v==='object'&&'d' in v){
+          /* بيانات سحابية بتوقيت: الأحدث يكسب */
+          if(v.t>mt){localStorage.setItem('sakr_'+k,JSON.stringify(v.d));localStorage.setItem('sakr_mt_'+k,v.t);refreshAll()}
+          else if(v.t<mt){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(localStorage.getItem('sakr_'+k))})}catch(e){}}
+        }else if(v==null){
+          /* السحابة فاضية: ارفع المحلي (بتوعيته) */
           const local=localStorage.getItem('sakr_'+k);
-          if(local){try{FB.db.ref('sakr/'+k).set(JSON.parse(local))}catch(e){}}
-          return;
+          if(local){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(local)})}catch(e){}}
+        }else{
+          /* قيمة سحابية قديمة بدون توقيت: المحلي الأحدث يكسب ويرفع نفسه */
+          try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(localStorage.getItem('sakr_'+k))})}catch(e){}
         }
-        const vs=JSON.stringify(v);const cur=localStorage.getItem('sakr_'+k);
-        if(vs!==cur){localStorage.setItem('sakr_'+k,vs);refreshAll()}
       });
     });
   }catch(e){FB.ready=false}

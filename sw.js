@@ -1,26 +1,38 @@
-/* Service Worker — معامل صقر (PWA + إشعارات FCM) */
-const CACHE = 'sakr-v1';
+/* Service Worker — معامل صقر (PWA + إشعارات FCM)
+   استراتيجية: الشبكة أولاً (Network-First) — التحديثات توصل للتطبيق المثبت فوراً
+   مع كاش احتياطي لو مفيش نت */
+const CACHE = 'sakr-v2';
 const ASSETS = ['./','./index.html','./logo.jpeg','./iflash1800.png','./icon-192.png','./icon-512.png','./manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(clients.claim());
+  /* امسح الكاشات القديمة عشان التحديثات توصل */
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-      if (res.ok && e.request.method === 'GET') {
+    fetch(e.request).then(res => {
+      /* نجح التحميل من الشبكة: خزّن نسخة جديدة وقدّمها فوراً */
+      if (res.ok) {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
       }
       return res;
-    }).catch(() => caches.match('./index.html')))
+    }).catch(() =>
+      /* مفيش نت: قدّم من الكاش */
+      caches.match(e.request).then(r => r || caches.match('./index.html'))
+    )
   );
 });
 
-/* ===== إشعارات Firebase (FCM) — شغالة لما تضيف مفتاح VAPID ===== */
+/* ===== إشعارات Firebase (FCM) ===== */
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 try {
