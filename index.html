@@ -4,7 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>معامل صقر للتحاليل الطبية | حجز زيارة منزلية لسحب العينات</title>
-<meta name="description" content="معامل صقر للتحاليل الطبية - حجز زيارات منزلية لسحب العينات، تسعير التحاليل، واستلام النتائج أونلاين.">
+<meta name="description" content="معامل صقر للتحاليل الطبية في دكرنس - حجز زيارات منزلية لسحب عينات التحاليل، معرفة أسعار التحاليل فوراً، واستلام النتائج أونلاين برقم الملف. خدمة 24 ساعة.">
+<meta name="robots" content="index, follow">
+<meta name="keywords" content="معامل صقر, تحاليل طبية, دكرنس, سحب عينات منزلية, معمل تحاليل, نتايج تحاليل اونلاين">
+<link rel="canonical" href="https://sakr.mtayea.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="معامل صقر للتحاليل الطبية | سحب العينات في بيتك">
+<meta property="og:description" content="احجز زيارة منزلية لسحب العينات، اعرف تكلفة تحاليلك، واستلم نتيجتك أونلاين — دكرنس، خدمة 24 ساعة.">
+<meta property="og:url" content="https://sakr.mtayea.com/">
+<meta property="og:image" content="https://sakr.mtayea.com/logo.jpeg">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"MedicalLab","name":"معامل صقر للتحاليل الطبية","url":"https://sakr.mtayea.com","logo":"https://sakr.mtayea.com/logo.jpeg","image":"https://sakr.mtayea.com/logo.jpeg","telephone":"+201040271091","address":{"@type":"PostalAddress","streetAddress":"شارع المستشفى","addressLocality":"دكرنس","addressRegion":"الدقهلية","addressCountry":"EG"},"geo":{"@type":"GeoCoordinates","latitude":30.83,"longitude":31.29},"openingHoursSpecification":{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],"opens":"00:00","closes":"23:59"},"sameAs":["https://www.facebook.com/drsakrlab"],"priceRange":"$$"}
+</script>
 <link rel="icon" type="image/jpeg" href="logo.jpeg">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap"></noscript>
@@ -629,7 +641,7 @@ const FIREBASE_CONFIG={
 /* ================= Data Layer ================= */
 const DBL={
   get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem('sakr_'+k));return v==null?d:v}catch(e){return d}},
-  set:(k,v)=>{const t=Date.now();localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t);if(FB.ready){try{FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
+  set:(k,v)=>{const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){/* مساحة الجهاز ممتلئة — السحابة هتحفظ والمزامنة هترجعها */}if(FB.ready){try{FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
 };
 const FB={ready:false,db:null,connected:false,loadFailed:false};
 function initFirebase(){
@@ -1156,7 +1168,8 @@ function waNotify(phone,fileNo){
 }
 function vResults(c){
   const rows=Object.keys(results).map(no=>{const r=results[no];
-    const fileCell=r.link?'<a href="'+esc(r.link)+'" target="_blank">لينك</a>':esc(r.name||'ملف مرفوع')+' ('+(r.type==='pdf'?'PDF':'صورة')+')';
+    const es=resultList(no);const ub=(es[es.length-1]&&es[es.length-1].uploadedBy)||'—';
+    const fileCell=r.link?'<a href="'+esc(r.link)+'" target="_blank">لينك</a>':esc(r.name||'ملف مرفوع')+' ('+(r.type==='pdf'?'PDF':'صورة')+')'+(ub!=='—'?'<br><span class="hint">بواسطة: '+esc(ub)+'</span>':'');
     return '<tr><td><b>'+esc(no)+'</b></td><td>'+fileCell+'</td><td>'+esc(r.date||'')+'</td><td><button class="btn btn-danger btn-sm" onclick="delResult(\''+no+'\')">حذف</button></td></tr>'}).join('');
   c.innerHTML='<div class="dash-card"><h3>📤 رفع نتيجة جديدة (ملف بدل اللينك)</h3>'+
   '<div class="grid2"><div class="field"><label>رقم الملف</label><input id="adFileNo" placeholder="SL-2001"></div>'+
@@ -1592,9 +1605,10 @@ document.getElementById('bkImgCam').addEventListener('change',e=>handleBkImg(e.t
 document.getElementById('mobileMenu').addEventListener('click',e=>{if(e.target.tagName==='A')document.getElementById('mobileMenu').style.display='none'});
 document.querySelectorAll('.stat b').forEach(el=>cntIO.observe(el));
 /* تسجيل عامل الخدمة (PWA) */
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});setInterval(()=>{navigator.serviceWorker.getRegistration().then(r=>{if(r)r.update()})},60*60*1000);}
 /* لو سكريبتات Firebase اتأخرت، حاول تاني */
 window.addEventListener('load',()=>setTimeout(()=>{if(typeof firebase!=='undefined'&&!FB.ready)initFirebase()},2500));
+window.addEventListener('load',()=>setTimeout(()=>{if(typeof firebase!=='undefined'&&!FB.ready)initFirebase()},8000));
 /* تلميح التثبيت على الآيفون (Apple مابتدعمش برومبت التثبيت التلقائي) */
 window.addEventListener('load',()=>setTimeout(()=>{
   if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone&&!localStorage.getItem('sakr_no_install'))
