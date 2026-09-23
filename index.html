@@ -1450,14 +1450,19 @@ function saveSite(){
   DBL.set('site',site);renderSite();toast('المحتوى اتحفظ ✅');
 }
 function vSettings(c){
-  c.innerHTML='<div class="dash-card"><h3>⚙️ إعدادات الموقع</h3>'+
-  '<div class="field"><label>رقم واتساب المعمل الأساسي (بكود الدولة)</label><input id="setWa" value="'+esc(settings.wa)+'" placeholder="2010xxxxxxxx"></div>'+
+  if(!isMaster()){
+    c.innerHTML='<div class="dash-card" style="text-align:center;padding:2.5rem"><div style="font-size:2.6rem">🔒</div><h3>الإعدادات للمشرف العام فقط</h3><p class="hint">رقم واتساب المعمل وكلمة مرور الإدارة يغيرهم المشرف العام بس — لو محتاج تعديل كلم المشرف</p></div>';
+    return;
+  }
+  c.innerHTML='<div class="dash-card"><h3>⚙️ إعدادات الموقع — للمشرف العام فقط</h3>'+
+  '<div class="field"><label>رقم واتساب المعمل الأساسي (بكود الدولة) — بيستقبل طلبات العملاء</label><input id="setWa" value="'+esc(settings.wa)+'" placeholder="2010xxxxxxxx"></div>'+
   '<div class="field"><label>تغيير كلمة مرور الإدارة (المدير)</label><input id="setAdminPass" placeholder="كلمة مرور جديدة"></div>'+
   '<button class="btn btn-orange btn-sm" onclick="saveSettings()">حفظ الإعدادات</button>'+
   '<p class="hint" style="margin-top:.6rem">رقم الواتساب ده بيستقبل طلبات التسعير من الموقع.</p>'+
   (FB.ready?'':'<p class="hint" style="color:#e68900;font-weight:800">⚠️ فعّل Firebase عشان البيانات تتزامن على كل الأجهزة — الصق الإعدادات في FIREBASE_CONFIG في كود الملف.</p>')+'</div>';
 }
 function saveSettings(){
+  if(!isMaster())return toast('الإعدادات للمشرف العام فقط',true);
   const wa=setWa.value.trim(),p=setAdminPass.value.trim();
   if(wa)settings.wa=normPhone(wa);
   if(p){if(p.length<4)return toast('كلمة المرور قصيرة',true);settings.adminPass=p}
