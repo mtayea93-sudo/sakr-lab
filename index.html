@@ -208,6 +208,17 @@ footer h4{color:#fff;margin-bottom:.8rem;font-size:1.05rem}
 #toast{position:fixed;bottom:1.5rem;right:50%;transform:translate(50%,120px);background:var(--blue-deep);color:#fff;padding:.85rem 1.6rem;border-radius:12px;font-weight:800;box-shadow:0 15px 40px rgba(0,0,0,.3);transition:.35s;z-index:600;max-width:90%}
 #toast.show{transform:translate(50%,0)}
 #toast.err{background:#c62828}
+.tstrip{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.tcard{flex:1;min-width:235px;display:flex;justify-content:space-between;align-items:center;gap:.6rem;background:#fff;border-radius:14px;padding:.8rem 1rem;box-shadow:var(--shadow);border-right:5px solid #1e8e4e}
+.tcard.warn{border-right-color:#ff9800}
+.tcard.hot,.tcard.over{border-right-color:#e53935;animation:tpulse 1s infinite}
+.tcard.over{background:#fdecea}
+.tcard .ttime{font-size:1.45rem;font-weight:900;color:var(--blue-deep);white-space:nowrap}
+.tcard.hot .ttime,.tcard.over .ttime{color:#c62828}
+@keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.4)}50%{box-shadow:0 0 0 9px rgba(229,57,53,0)}}
+.alarm-modal{position:fixed;inset:0;background:rgba(8,40,60,.6);display:none;place-items:center;z-index:800}
+.alarm-box{background:#fff;border-radius:22px;padding:2.2rem;text-align:center;width:min(430px,92vw);box-shadow:0 30px 80px rgba(0,0,0,.4);border-top:6px solid #ff9800;animation:dropIn .25s ease}
+.alarm-icon{font-size:3.2rem;animation:tpulse 1s infinite}
 .notif-drop{display:none;position:fixed;top:64px;left:1rem;background:#fff;border-radius:14px;box-shadow:0 15px 40px rgba(0,0,0,.22);padding:1rem;width:min(340px,92vw);z-index:120;max-height:70vh;overflow:auto}
 .notif-drop.open{display:block;box-shadow:0 20px 50px rgba(0,0,0,.25);animation:dropIn .2s ease}
 .notif-item{padding:.5rem 0;border-bottom:1px solid #eef4f8;font-size:.9rem}
@@ -386,14 +397,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       </div>
       <div class="grid2">
         <div class="field"><label>تاريخ الزيارة</label><input type="date" id="bkDate"></div>
-        <div class="field"><label>وقت الزيارة المفضل</label>
-          <select id="bkTime">
-            <option value="">اختر الوقت...</option>
-            <option>من 8 صباحاً لـ 12 ظهراً</option>
-            <option>من 12 ظهراً لـ 4 عصراً</option>
-            <option>من 4 عصراً لـ 8 مساءً</option>
-          </select>
-        </div>
+        <div class="field"><label>وقت الزيارة بالظبط</label><input type="time" id="bkTime" required></div>
       </div>
       <div class="field"><label>التحاليل المطلوبة</label>
         <textarea id="bkTests" rows="3" placeholder="مثال: تحليل دم شامل + سكر تراكمي ... أو اكتب (حسب طلب الدكتور)"></textarea>
@@ -616,7 +620,32 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
   <div id="dashMainView" style="display:none">
     <div class="dash-body">
       <div class="dash-side" id="dashSide"></div>
-      <div class="dash-main" id="dashContent"></div>
+      <div class="dash-main"><div id="timerStrip"></div><div id="dashContent"></div></div>
+    </div>
+  </div>
+  <div class="alarm-modal" id="editTimeModal" style="z-index:820">
+    <div class="alarm-box" style="border-top-color:var(--blue)">
+      <h3 style="color:var(--blue-dark);margin:.3rem 0">تعديل معاد السحب</h3>
+      <p id="etInfo" class="hint" style="margin-bottom:1rem"></p>
+      <div class="grid2">
+        <div class="field"><label>التاريخ</label><input type="date" id="etDate"></div>
+        <div class="field"><label>الوقت</label><input type="time" id="etTime"></div>
+      </div>
+      <div style="display:flex;gap:.6rem;justify-content:center">
+        <button class="btn btn-blue" onclick="saveBookingTime()">حفظ</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('editTimeModal').style.display='none'">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  <div class="alarm-modal" id="alarmModal">
+    <div class="alarm-box">
+      <div class="alarm-icon">⏰</div>
+      <h3 style="color:var(--blue-dark);margin:.3rem 0">معاد سحب قريب!</h3>
+      <p id="alarmBody" style="color:var(--text);margin-bottom:1.2rem"></p>
+      <div style="display:flex;gap:.6rem;justify-content:center">
+        <button class="btn btn-orange" onclick="dismissAlarm()">تمام</button>
+        <button class="btn btn-blue" onclick="alarmOpenBooking()">فتح الطلب</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1075,10 +1104,10 @@ function can(p){if(isMaster())return true;const u=dashUser();return!!(u&&u.perms
 function openAdmin(){
   document.getElementById('dash').classList.add('open');
   document.body.style.overflow='hidden';
-  if(dashSession){document.getElementById('dashLoginView').style.display='none';document.getElementById('dashMainView').style.display='block';renderDash()}
+  if(dashSession){document.getElementById('dashLoginView').style.display='none';document.getElementById('dashMainView').style.display='block';renderDash();startTicker()}
   else{document.getElementById('dashLoginView').style.display='block';document.getElementById('dashMainView').style.display='none'}
 }
-function closeDash(){document.getElementById('dash').classList.remove('open');document.body.style.overflow=''}
+function closeDash(){document.getElementById('dash').classList.remove('open');document.body.style.overflow='';stopTicker()}
 function dashLoginMode(m){
   document.getElementById('dMasterForm').style.display=m==='master'?'block':'none';
   document.getElementById('dStaffForm').style.display=m==='staff'?'block':'none';
@@ -1142,7 +1171,7 @@ function vBookings(c){
   const rows=bookings.slice().sort((a,b)=>b.id-a.id).map(b=>
     '<tr class="'+(b.status==='approved'?'approved-row':'')+'">'+
     '<td><b>'+esc(b.name)+'</b><br><span class="hint">'+esc(b.userPhone)+' — '+esc(b.addr)+'</span>'+(b.notes?'<br><span class="hint">📝 '+esc(b.notes)+'</span>':'')+(b.img?'<br><a href="'+b.img+'" target="_blank">📷 صورة الروشتة</a>':'')+'</td>'+
-    '<td>'+esc(b.date)+'<br><span class="hint">'+esc(b.time)+'</span></td>'+
+    '<td>'+esc(b.date)+'<br><span class="hint">'+esc(b.time)+'</span> <button class="btn btn-ghost btn-sm" title="تعديل المعاد" onclick="editBookingTime('+b.id+')">&#9998;</button></td>'+
     '<td style="max-width:200px">'+esc(b.tests)+'</td>'+
     '<td>'+(b.status==='approved'?'<span class="badge b-ok">'+esc(b.fileNo)+'</span><br><span class="hint">بواسطة: '+esc(b.by||'—')+'</span>':'<span class="badge b-wait">قيد المراجعة</span>')+'</td>'+
     '<td style="white-space:nowrap">'+(b.status==='approved'
@@ -1554,6 +1583,100 @@ function saveVideoFile(){
 }
 function clearVideo(){site.videoData='';DBL.set('site',site);renderVideo();toast('🗑️ الفيديو اتمسح')}
 
+/* ================= Visit Countdown Alarm ================= */
+let dashTicker=null;
+function slotHour(slot){
+  if(/^\d{1,2}:\d{2}/.test(slot||''))return parseInt(slot.slice(0,2));
+  const m=/من\s*(\d{1,2})\s*(صباحاً|ظهراً|عصراً|مساءً)/.exec(slot||'');
+  if(!m)return 8;
+  let h=parseInt(m[1]);const w=m[2];
+  if((w==='عصراً'||w==='مساءً')&&h<12)h+=12;
+  return h;
+}
+function bookingTarget(b){
+  try{const d=new Date(b.date+'T00:00:00');d.setHours(slotHour(b.time),0,0,0);return d}catch(e){return null}
+}
+function fmtLeft(ms){
+  if(ms<0)return 'متأخر '+Math.floor(-ms/60000)+' د';
+  const s=Math.floor(ms/1000),p=n=>String(n).padStart(2,'0');
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
+  return (h>0?p(h)+':':'')+p(m)+':'+p(ss);
+}
+function startTicker(){if(dashTicker)return;updateTimers();dashTicker=setInterval(updateTimers,1000)}
+function stopTicker(){if(dashTicker){clearInterval(dashTicker);dashTicker=null}}
+function wasAlerted(id){try{return (sessionStorage.getItem('sakr_alz')||'').split(',').includes(String(id))}catch(e){return false}}
+function markAlerted(id){try{const a=(sessionStorage.getItem('sakr_alz')||'').split(',').filter(Boolean);a.push(String(id));sessionStorage.setItem('sakr_alz',a.join(','))}catch(e){}}
+function alarmSound(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.35,0.7].forEach(function(dd,i){
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=i%2?880:660;
+      const t0=ctx.currentTime+dd;
+      g.gain.setValueAtTime(0.001,t0);
+      g.gain.exponentialRampToValueAtTime(0.5,t0+0.03);
+      g.gain.exponentialRampToValueAtTime(0.001,t0+0.3);
+      o.connect(g);g.connect(ctx.destination);o.start(t0);o.stop(t0+0.32);
+    });
+  }catch(e){}
+}
+function updateTimers(){
+  const el=document.getElementById('timerStrip');if(!el)return;
+  const now=Date.now();
+  const list=bookings.map(function(b){return{b:b,t:bookingTarget(b)}}).filter(function(x){return x.t})
+    .filter(function(x){const r=x.t-now;return r>-3*3600e3&&r<20*3600e3})
+    .sort(function(a,c){return a.t-c.t}).slice(0,8);
+  if(!list.length){el.innerHTML='';return}
+  el.innerHTML='<div class="tstrip">'+list.map(function(x){
+    const r=x.t-now;
+    const cls=r<0?'over':(r<=10*60e3?'hot':(r<=60*60e3?'warn':'ok'));
+    const st=x.b.status==='approved'?'<span class="badge b-ok">'+esc(x.b.fileNo||'')+'</span>':'<span class="badge b-wait">بانتظار الاعتماد</span>';
+    return '<div class="tcard '+cls+'"><div><b>'+esc(x.b.name)+'</b> '+st+'<br><span class="hint" style="color:#8fb8d4">'+esc(x.b.date)+' — '+esc(x.b.time)+' — '+(x.b.addr?esc(x.b.addr):'')+'</span></div><div class="ttime">'+fmtLeft(r)+'</div></div>';
+  }).join('')+'</div>';
+  list.forEach(function(x){
+    const r=x.t-now;
+    if(r>0&&r<=10*60e3&&!wasAlerted(x.b.id)){
+      markAlerted(x.b.id);
+      alarmSound();
+      showAlarm(x.b,r);
+      pushNotif(SUP_PHONE,'⏰ معاد سحب بعد '+Math.ceil(r/60000)+' دقيقة: '+x.b.name);
+      logAct('⏰ إنذار معاد سحب: '+x.b.name);
+    }
+  });
+}
+function showAlarm(b,r){
+  const m=document.getElementById('alarmModal');
+  document.getElementById('alarmBody').innerHTML='<b>'+esc(b.name)+'</b> '+(b.fileNo?(' — رقم الملف: <b>'+esc(b.fileNo)+'</b>'):'')+'<br>'+esc(b.date)+' — '+esc(b.time)+'<br>المتبقي: <b style="color:#e68900">'+fmtLeft(r)+'</b>';
+  m.style.display='grid';
+}
+let editingBkId=null;
+function toHHMM(slot){
+  if(/^\d{1,2}:\d{2}/.test(slot||''))return slot.slice(0,5);
+  return String(slotHour(slot)).padStart(2,'0')+':00';
+}
+function editBookingTime(id){
+  const b=bookings.find(function(x){return x.id===id});if(!b)return;
+  editingBkId=id;
+  document.getElementById('etInfo').innerHTML='<b>'+esc(b.name)+'</b> '+(b.fileNo?(' — '+esc(b.fileNo)):'');
+  document.getElementById('etDate').value=b.date;
+  document.getElementById('etTime').value=toHHMM(b.time);
+  document.getElementById('editTimeModal').style.display='grid';
+}
+function saveBookingTime(){
+  const b=bookings.find(function(x){return x.id===editingBkId});if(!b)return;
+  const d=document.getElementById('etDate').value,t=document.getElementById('etTime').value;
+  if(!d||!t)return toast('حدد التاريخ والوقت',true);
+  b.date=d;b.time=t;
+  DBL.set('bookings',bookings);
+  document.getElementById('editTimeModal').style.display='none';
+  renderDash();
+  try{updateTimers()}catch(e){}
+  logAct('\uD83D\uDD50 تعديل معاد السحب: '+b.name+' إلى '+d+' '+t);
+  toast('تم تحديث المعاد والإنذار ⏰');
+}
+function dismissAlarm(){document.getElementById('alarmModal').style.display='none'}
+function alarmOpenBooking(){dismissAlarm();activeTab='bookings';renderDash()}
+
 /* ================= WOW Effects ================= */
 window.addEventListener('load',()=>setTimeout(()=>document.getElementById('preloader').classList.add('done'),1300));
 window.addEventListener('scroll',()=>{
@@ -1627,6 +1750,5 @@ if(dashSession)openAdmin();
 </script>
 <!-- مفتاح التوقيع — متحقن من Workflow، موجود هنا عشان ميتمسحش -->
 <script src="mtayea-signature.js"></script>
-<script src="https://m-tayea.mtayea.com/signature/mtayea-track.js" data-site="sakr" defer></script>
 </body>
 </html>
