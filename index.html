@@ -1173,9 +1173,9 @@ function vBookings(c){
     '<td><b>'+esc(b.name)+'</b><br><span class="hint">'+esc(b.userPhone)+' — '+esc(b.addr)+'</span>'+(b.notes?'<br><span class="hint">📝 '+esc(b.notes)+'</span>':'')+(b.img?'<br><a href="'+b.img+'" target="_blank">📷 صورة الروشتة</a>':'')+'</td>'+
     '<td>'+esc(b.date)+'<br><span class="hint">'+esc(b.time)+'</span> <button class="btn btn-ghost btn-sm" title="تعديل المعاد" onclick="editBookingTime('+b.id+')">&#9998;</button></td>'+
     '<td style="max-width:200px">'+esc(b.tests)+'</td>'+
-    '<td>'+(b.status==='approved'?'<span class="badge b-ok">'+esc(b.fileNo)+'</span><br><span class="hint">بواسطة: '+esc(b.by||'—')+'</span>':'<span class="badge b-wait">قيد المراجعة</span>')+'</td>'+
+    '<td>'+(b.done?'<span class="badge b-ok">تم السحب &#10003;</span><br><span class="hint">'+esc(b.fileNo||'')+'</span>':(b.status==='approved'?'<span class="badge b-ok">'+esc(b.fileNo)+'</span><br><span class="hint">بواسطة: '+esc(b.by||'—')+'</span>':'<span class="badge b-wait">قيد المراجعة</span>'))+'</td>'+
     '<td style="white-space:nowrap">'+(b.status==='approved'
-      ? '<button class="btn btn-blue btn-sm" onclick="waNotify(\''+b.userPhone+'\',\''+b.fileNo+'\')">واتساب</button>'
+      ? '<button class="btn btn-blue btn-sm" onclick="waNotify(\''+b.userPhone+'\',\''+b.fileNo+'\')">واتساب</button> <button class="btn btn-ghost btn-sm" onclick="markDone('+b.id+')">'+(b.done?'&#8617; تراجع':'&#10003; تم السحب')+'</button>'
       : '<button class="btn btn-orange btn-sm" onclick="approveBooking('+b.id+')">اعتماد + رقم ملف</button>')+
     ' <button class="btn btn-danger btn-sm" onclick="delBooking('+b.id+')">حذف</button></td></tr>').join('');
   c.innerHTML='<div class="dash-card"><h3>📋 طلبات الزيارات ('+bookings.length+')</h3><div class="table-wrap"><table><thead><tr><th>العميل</th><th>التاريخ</th><th>التحاليل</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
@@ -1623,7 +1623,7 @@ function alarmSound(){
 function updateTimers(){
   const el=document.getElementById('timerStrip');if(!el)return;
   const now=Date.now();
-  const list=bookings.map(function(b){return{b:b,t:bookingTarget(b)}}).filter(function(x){return x.t})
+  const list=bookings.map(function(b){return{b:b,t:bookingTarget(b)}}).filter(function(x){return x.t&&!x.b.done})
     .filter(function(x){const r=x.t-now;return r>-3*3600e3&&r<20*3600e3})
     .sort(function(a,c){return a.t-c.t}).slice(0,8);
   if(!list.length){el.innerHTML='';return}
@@ -1631,7 +1631,7 @@ function updateTimers(){
     const r=x.t-now;
     const cls=r<0?'over':(r<=10*60e3?'hot':(r<=60*60e3?'warn':'ok'));
     const st=x.b.status==='approved'?'<span class="badge b-ok">'+esc(x.b.fileNo||'')+'</span>':'<span class="badge b-wait">بانتظار الاعتماد</span>';
-    return '<div class="tcard '+cls+'"><div><b>'+esc(x.b.name)+'</b> '+st+'<br><span class="hint" style="color:#8fb8d4">'+esc(x.b.date)+' — '+esc(x.b.time)+' — '+(x.b.addr?esc(x.b.addr):'')+'</span></div><div class="ttime">'+fmtLeft(r)+'</div></div>';
+    return '<div class="tcard '+cls+'"><div><b>'+esc(x.b.name)+'</b> '+st+'<br><span class="hint" style="color:#8fb8d4">'+esc(x.b.date)+' — '+esc(x.b.time)+' — '+(x.b.addr?esc(x.b.addr):'')+'</span><br><button class="btn btn-blue btn-sm" style="margin-top:.35rem" onclick="markDone('+x.b.id+')">&#10003; تم السحب</button></div><div class="ttime">'+fmtLeft(r)+'</div></div>';
   }).join('')+'</div>';
   list.forEach(function(x){
     const r=x.t-now;
@@ -1673,6 +1673,14 @@ function saveBookingTime(){
   try{updateTimers()}catch(e){}
   logAct('\uD83D\uDD50 تعديل معاد السحب: '+b.name+' إلى '+d+' '+t);
   toast('تم تحديث المعاد والإنذار ⏰');
+}
+function markDone(id){
+  const b=bookings.find(function(x){return x.id===id});if(!b)return;
+  b.done=!b.done;
+  DBL.set('bookings',bookings);
+  updateTimers();renderDash();
+  logAct(b.done?'\u2705 تم السحب: '+b.name:'\u21A9 تراجع تم السحب: '+b.name);
+  toast(b.done?'تم تسجيل السحب — الإنذار اتوقف':'تم التراجع');
 }
 function dismissAlarm(){document.getElementById('alarmModal').style.display='none'}
 function alarmOpenBooking(){dismissAlarm();activeTab='bookings';renderDash()}
