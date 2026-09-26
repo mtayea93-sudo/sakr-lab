@@ -1,7 +1,7 @@
 /* Service Worker — معامل صقر (PWA + إشعارات FCM)
    استراتيجية: الشبكة أولاً (Network-First) — التحديثات توصل للتطبيق المثبت فوراً
    مع كاش احتياطي لو مفيش نت */
-const CACHE = 'sakr-v3';
+const CACHE = 'sakr-v2';
 const ASSETS = ['./','./index.html','./logo.jpeg','./iflash1800.png','./icon-192.png','./icon-512.png','./manifest.json'];
 
 self.addEventListener('install', e => {

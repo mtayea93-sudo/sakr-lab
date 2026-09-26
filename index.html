@@ -671,10 +671,14 @@ const FIREBASE_CONFIG={
 /* ================= Data Layer ================= */
 const DBL={
   get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem('sakr_'+k));return v==null?d:v}catch(e){return d}},
-  set:(k,v)=>{const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){/* مساحة الجهاز ممتلئة — السحابة هتحفظ والمزامنة هترجعها */}if(FB.ready){try{FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
+  set:(k,v)=>{const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){}if(FB.ready){try{const empty=(Array.isArray(v)&&v.length===0)||(!Array.isArray(v)&&v&&typeof v==='object'&&Object.keys(v).length===0);if(empty)FB.db.ref('sakr/'+k).remove();else FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
 };
 const FB={ready:false,db:null,connected:false,loadFailed:false};
 function applyCloudData(k,v){
+  if((k==='users'||k==='bookings'||k==='prices'||k==='activity'||k==='chats'||k==='devices')&&!Array.isArray(v))v=[];
+  if((k==='results'||k==='settings'||k==='site'||k==='stats'||k==='notifs')&&(!v||typeof v!=='object'||Array.isArray(v)))v=(k==='stats')?{visits:0,logins:0,signups:0}:{};
+  if(k==='settings')v=Object.assign({wa:'201060651837',adminPass:'sakr2026'},v);
+  if(k==='site')v=Object.assign({},SITE_DEFAULT,v);
   if(k==='users')users=v;else if(k==='bookings')bookings=v;else if(k==='prices')prices=v;
   else if(k==='results')results=v;else if(k==='devices')devices=v;else if(k==='site')site=v;
   else if(k==='settings')settings=v;else if(k==='chats')chats=v;else if(k==='stats')stats=v;
@@ -696,27 +700,32 @@ function initFirebase(){
       FB.db.ref('sakr/'+k).on('value',s=>{
         const v=s.val();
         const mt=parseInt(localStorage.getItem('sakr_mt_'+k)||'0');
-        if(v&&typeof v==='object'&&'d' in v){
-          /* بيانات سحابية بتوقيت: الأحدث يكسب */
-          if(v.t>mt){localStorage.setItem('sakr_'+k,JSON.stringify(v.d));localStorage.setItem('sakr_mt_'+k,v.t);applyCloudData(k,v.d);refreshAll()}
-          else if(v.t<mt){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(localStorage.getItem('sakr_'+k))})}catch(e){}}
-        }else if(v==null){
-          /* السحابة فاضية: ارفع المحلي لو فيه بيانات فعلاً */
-          const local=localStorage.getItem('sakr_'+k);
-          if(local&&local!=='null'&&local!=='[]'&&local!=='{}'){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(local)})}catch(e){}}
+        const objKeys=(k==='results'||k==='settings'||k==='site'||k==='notifs'||k==='stats');
+        const def=objKeys?{}:[];
+        const okT=function(x){return objKeys?(x&&typeof x==='object'&&!Array.isArray(x)):Array.isArray(x)};
+        let data=null,valid=false,wrapped=false;
+        if(v&&typeof v==='object'&&'d' in v){data=v.d;wrapped=true;valid=okT(data)}
+        else if(okT(v)){data=v;valid=true}
+        if(!valid){
+          let lv=null;try{lv=JSON.parse(localStorage.getItem('sakr_'+k))}catch(e){}
+          const hasData=function(x){return okT(x)&&(Array.isArray(x)?x.length>0:Object.keys(x).length>0)};
+          const use=hasData(lv)?lv:def;
+          localStorage.setItem('sakr_'+k,JSON.stringify(use));
+          localStorage.setItem('sakr_mt_'+k,Date.now());
+          applyCloudData(k,use);
+          if(hasData(lv)){try{FB.db.ref('sakr/'+k).set({t:Date.now(),d:lv})}catch(e){}}
+          refreshAll();
+          return;
+        }
+        if(wrapped){
+          if(v.t>mt){localStorage.setItem('sakr_'+k,JSON.stringify(data));localStorage.setItem('sakr_mt_'+k,v.t);applyCloudData(k,data);refreshAll()}
+          else if(v.t<mt){const l=localStorage.getItem('sakr_'+k);if(l&&l!=='[]'&&l!=='{}'){try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(l)})}catch(e){}}}
         }else{
-          /* قيمة سحابية قديمة بدون توقيت */
-          const local=localStorage.getItem('sakr_'+k);
-          if(local&&local!=='null'&&local!=='[]'&&local!=='{}'){
-            /* المحلي فيه بيانات: ارفعه بتوعيته */
-            try{FB.db.ref('sakr/'+k).set({t:mt,d:JSON.parse(local)})}catch(e){}
-          }else{
-            /* المحلي فاضي: خد النسخة السحابية القديمة واحفظها محلياً */
-            localStorage.setItem('sakr_'+k,JSON.stringify(v));
-            localStorage.setItem('sakr_mt_'+k,Date.now());
-            applyCloudData(k,v);
-            refreshAll();
-          }
+          localStorage.setItem('sakr_'+k,JSON.stringify(data));
+          localStorage.setItem('sakr_mt_'+k,Date.now());
+          applyCloudData(k,data);
+          try{FB.db.ref('sakr/'+k).set({t:Date.now(),d:data})}catch(e){}
+          refreshAll();
         }
       });
     });
@@ -770,6 +779,17 @@ if(DBL.get('devVer',0)!==2){devices=JSON.parse(JSON.stringify(DEVICES_DEFAULT));
 let session=DBL.get('session',null);
 let dashSession=(()=>{try{return JSON.parse(sessionStorage.getItem('sakr_dash'))}catch(e){return null}})();
 localStorage.removeItem('sakr_dashSession');
+if(!Array.isArray(users))users=[];
+if(!Array.isArray(bookings))bookings=[];
+if(!Array.isArray(prices))prices=[];
+if(!Array.isArray(activity))activity=[];
+if(!Array.isArray(chats))chats=[];
+if(!Array.isArray(devices))devices=[];
+if(!results||typeof results!=='object'||Array.isArray(results))results={};
+if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={wa:'201060651837',adminPass:'sakr2026'};
+if(!site||typeof site!=='object'||Array.isArray(site))site=Object.assign({},SITE_DEFAULT);
+if(!stats||typeof stats!=='object'||Array.isArray(stats))stats={visits:0,logins:0,signups:0};
+if(!notifs||typeof notifs!=='object'||Array.isArray(notifs))notifs={};
 let bkImgData=null;
 let chosenTests={};
 let chats=DBL.get('chats',[]);
