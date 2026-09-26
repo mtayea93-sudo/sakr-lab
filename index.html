@@ -779,6 +779,13 @@ if(DBL.get('devVer',0)!==2){devices=JSON.parse(JSON.stringify(DEVICES_DEFAULT));
 let session=DBL.get('session',null);
 let dashSession=(()=>{try{return JSON.parse(sessionStorage.getItem('sakr_dash'))}catch(e){return null}})();
 localStorage.removeItem('sakr_dashSession');
+let bkImgData=null;
+let chosenTests={};
+let chats=DBL.get('chats',[]);
+let stats=DBL.get('stats',{visits:0,logins:0,signups:0});
+let activity=DBL.get('activity',[]);
+let chatThread=null;
+/* حراسة الأنواع — بعد كل التعريفات */
 if(!Array.isArray(users))users=[];
 if(!Array.isArray(bookings))bookings=[];
 if(!Array.isArray(prices))prices=[];
@@ -790,12 +797,6 @@ if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={wa:'
 if(!site||typeof site!=='object'||Array.isArray(site))site=Object.assign({},SITE_DEFAULT);
 if(!stats||typeof stats!=='object'||Array.isArray(stats))stats={visits:0,logins:0,signups:0};
 if(!notifs||typeof notifs!=='object'||Array.isArray(notifs))notifs={};
-let bkImgData=null;
-let chosenTests={};
-let chats=DBL.get('chats',[]);
-let stats=DBL.get('stats',{visits:0,logins:0,signups:0});
-let activity=DBL.get('activity',[]);
-let chatThread=null;
 if(!sessionStorage.getItem('sakr_visited')){try{stats.visits++;DBL.set('stats',stats)}catch(e){}sessionStorage.setItem('sakr_visited','1')}
 
 /* ================= Helpers ================= */
