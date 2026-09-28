@@ -338,7 +338,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <p style="font-size:.85rem;opacity:.7;line-height:1.9;max-width:520px">معامل صقر هو معمل تحاليل طبية معتمد في دكرنس — من أقرب معامل التحليل في دكرنس ليك. بنوفر سحب عينات من البيت في دكرنس والقرى المجاورة، نتائج تحاليل أونلاين برقم الملف، وأسعار كل التحاليل بوضوح تام.</p>
       <div class="hero-btns">
         <a href="#booking" class="btn btn-orange">احجز زيارة منزلية الآن</a>
-        <a href="#prices" class="btn btn-ghost" style="background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4)">اعرف تكلفة التحاليل</a>
+        <a href="#prices" class="btn btn-ghost" style="background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4)">اختار التحاليل اللي عايزها</a>
       </div>
       <div class="stats">
         <div class="stat"><b>+20</b><span>سنة خبرة</span></div>
@@ -441,8 +441,8 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
 
 <section id="prices">
   <div class="container">
-    <div class="sec-title"><h2>قائمة الأسعار</h2><div class="line"></div></div>
-    <p class="sec-sub" data-site="pricesSub">اختار التحاليل المطلوبة وشوف المجموع الكلي — الأسعار مش بتظهر إلا بعد اختيارك</p>
+    <div class="sec-title"><h2>اختار التحاليل المطلوبة</h2><div class="line"></div></div>
+    <p class="sec-sub" data-site="pricesSub">اختار التحاليل المطلوبة وابعت طلب التسعيرة على واتساب — بنرد عليك بالأسعار فورًا</p>
     <div class="panel">
       <div class="price-tools">
         <div class="search-box"><input id="priceSearch" placeholder="🔍 ابحث باسم التحليل..." oninput="renderPrices()"></div>
@@ -454,12 +454,11 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <div class="price-table-wrap" id="priceTableWrap" style="display:none">
         <table><thead><tr><th style="width:70%">اسم التحليل</th><th>اختار ✔</th></tr></thead><tbody id="priceTbody"></tbody></table>
       </div>
-      <p class="hint" id="priceHint" style="display:none;margin-top:.9rem;text-align:center;font-weight:800;color:var(--blue-dark)">💡 علّم ✔ على التحاليل اللي عايزها — هتظهرلك قايمة جانبية فوراً فيها التفاصيل والمجموع الكلي، ومنها تقدر تبعت طلب تسعيرة واتساب للمعمل</p>
+      <p class="hint" id="priceHint" style="display:none;margin-top:.9rem;text-align:center;font-weight:800;color:var(--blue-dark)">💡 علّم ✔ على التحاليل اللي عايزها — هتظهرلك القايمة المختارة ومنها تبعت طلب التسعيرة على واتساب للمعمل</p>
       <button class="cart-fab" id="cartFab" style="display:none" onclick="toggleCart()">🧾 <span id="fabInfo"></span> ▲</button>
       <div class="cart-panel" id="totalBar" style="display:none">
-        <h4>🧾 التحاليل المختارة وتفاصيلها <button onclick="document.getElementById('totalBar').style.display='none'" style="float:left;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;font-weight:900">✕</button></h4>
+        <h4>🧾 التحاليل المختارة <button onclick="document.getElementById('totalBar').style.display='none'" style="float:left;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;font-weight:900">✕</button></h4>
         <div id="chosenList"></div>
-        <div class="grand"><span>المجموع الكلي</span><b id="grandTotal">0 ج.م</b></div>
         <div style="display:flex;gap:.8rem;margin-top:1rem;flex-wrap:wrap">
           <a class="btn btn-orange" id="waQuoteBtn" target="_blank">💬 اطلب تسعيرة واتساب</a>
           <button class="btn btn-ghost" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.4)" onclick="clearSelection()">مسح الاختيار</button>
@@ -739,7 +738,7 @@ const SITE_DEFAULT={
   servicesSub:'كل اللي محتاجه لتحاليلك في مكان واحد',
   devicesSub:'أحدث أجهزة التحليل العالمية عشان نضمنلك أدق النتايج في أسرع وقت',
   bookingSub:'سجل دخولك الأول، وبعدين احجز موعد الزيارة المناسب ليك',
-  pricesSub:'اختار التحاليل المطلوبة وشوف المجموع الكلي — الأسعار مش بتظهر إلا بعد اختيارك',
+  pricesSub:'اختار التحاليل المطلوبة وابعت طلب التسعيرة على واتساب — بنرد عليك بالأسعار فورًا',
   resultsSub:'أدخل رقم الملف اللي وصلك على واتساب لما المعمل وافق على طلبك',
   contactSub:'إحنا في خدمتك على مدار الساعة',
   phones:['01040271091','0503460042','01060651837'],
@@ -1051,13 +1050,12 @@ function recalcTotal(){
   let total=0;
   document.getElementById('chosenList').innerHTML=names.map(n=>{
     total+=chosenTests[n];
-    return '<div class="chosen-item"><span>'+esc(n)+'</span><span>'+chosenTests[n]+' ج.م</span></div>';
+    return '<div class="chosen-item"><span>✔ '+esc(n)+'</span></div>';
   }).join('');
-  document.getElementById('fabInfo').textContent=names.length+' تحليل — '+total+' ج.م';
-  document.getElementById('grandTotal').textContent=total+' ج.م';
-  const lines=names.map(n=>'• '+n+' — '+chosenTests[n]+' ج.م').join('\n');
+  document.getElementById('fabInfo').textContent=names.length+' تحليل مختار ▲';
+  const lines=names.map(n=>'• '+n).join('\n');
   document.getElementById('waQuoteBtn').href=waLink(settings.wa,
-    'أهلاً معامل صقر 🦅\nعايز أحجز التحاليل دي:\n'+lines+'\nالمجموع الكلي: '+total+' ج.م\nممكن أحجز زيارة منزلية؟');
+    'أهلاً معامل صقر 🦅\nعايز أستفسر عن أسعار التحاليل دي:\n'+lines+'\nوممكن أحجز زيارة منزلية؟');
 }
 function clearSelection(){chosenTests={};document.querySelectorAll('.pchk').forEach(c=>c.checked=false);recalcTotal()}
 
