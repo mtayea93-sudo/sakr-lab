@@ -83,8 +83,8 @@ nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-f
 .nav-links a{padding:.45rem .85rem;border-radius:10px;font-weight:700;font-size:.95rem;transition:.2s}
 .nav-links a:hover{background:#e8f3fb;color:var(--blue-dark)}
 #userBadge{display:none;align-items:center;gap:.5rem;background:#eef7fd;border:1.5px solid #bcd9ec;padding:.35rem .9rem;border-radius:11px;font-weight:800;color:var(--blue-dark);font-size:.9rem;cursor:pointer}
-#mobileMenu{display:none;flex-direction:column;background:#fff;padding:.8rem;border-bottom:2px solid #e3eef6}
-#mobileMenu a{padding:.6rem;font-weight:700;border-bottom:1px solid #f0f5f9}
+#mobileMenu{display:none;flex-direction:column;background:#fff;padding:.8rem 1rem 1.2rem;border-bottom:2px solid #e3eef6;position:fixed;top:62px;left:0;right:0;z-index:1200;max-height:65vh;overflow-y:auto;border-radius:0 0 18px 18px;box-shadow:0 22px 45px rgba(11,94,156,.25)}
+#mobileMenu a{padding:.85rem .6rem;font-weight:800;font-size:1.02rem;border-bottom:1px solid #f0f5f9}
 
 /* Hero */
 .hero{background:linear-gradient(150deg,var(--blue-deep),var(--blue-dark) 45%,var(--blue));color:#fff;padding:4.2rem 0 5rem;position:relative;overflow:hidden}
@@ -267,7 +267,6 @@ footer h4{color:#fff;margin-bottom:.8rem;font-size:1.05rem}
   .grid2{grid-template-columns:1fr}
   .foot-grid{grid-template-columns:1fr}
   .nav-links{display:none}
-  #mobileMenu{display:flex !important}
   .device-hero{grid-template-columns:1fr;padding:1.6rem;text-align:center}
   .spec-chips{justify-content:center}
   .dash-body{grid-template-columns:1fr}
@@ -318,13 +317,13 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     </div>
   </div>
   <div id="mobileMenu" class="container">
-    <a href="#home" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">الرئيسية</a>
-    <a href="#services" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">خدماتنا</a>
-    <a href="#devices" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">أجهزتنا</a>
-    <a href="#booking" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">حجز زيارة منزلية</a>
-    <a href="#prices" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">قائمة الأسعار</a>
-    <a href="#results" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">استلام النتائج</a>
-    <a href="#contact" onclick="document.getElementById(\'mobileMenu\').style.display=\'none\'">تواصل معنا</a>
+    <a href="#home" onclick="document.getElementById('mobileMenu').style.display=\'none\'">الرئيسية</a>
+    <a href="#services" onclick="document.getElementById('mobileMenu').style.display=\'none\'">خدماتنا</a>
+    <a href="#devices" onclick="document.getElementById('mobileMenu').style.display=\'none\'">أجهزتنا</a>
+    <a href="#booking" onclick="document.getElementById('mobileMenu').style.display=\'none\'">حجز زيارة منزلية</a>
+    <a href="#prices" onclick="document.getElementById('mobileMenu').style.display=\'none\'">قائمة الأسعار</a>
+    <a href="#results" onclick="document.getElementById('mobileMenu').style.display=\'none\'">استلام النتائج</a>
+    <a href="#contact" onclick="document.getElementById('mobileMenu').style.display=\'none\'">تواصل معنا</a>
     <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62823;font-weight:900" onclick="document.getElementById('mobileMenu').style.display='none'">📢 للشكاوى</a>
   </div>
 </nav>
