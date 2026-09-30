@@ -683,7 +683,46 @@ function applyCloudData(k,v){
   else if(k==='settings')settings=v;else if(k==='chats')chats=v;else if(k==='stats')stats=v;
   else if(k==='activity')activity=v;else if(k==='notifs'){/* الجرس بيقرا من DBL مباشرة */}
 }
+const RESCUE = location.search.indexOf('rescue=1') !== -1;
+/* ================= وضع الإنقاذ ================= */
+const RESCUE_KEYS=['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'];
+function rescueRead(k){try{return JSON.parse(localStorage.getItem('sakr_'+k))}catch(e){return null}}
+function rescueCount(v){if(v==null)return'—';if(Array.isArray(v))return v.length+' سجل';if(typeof v==='object')return Object.keys(v).length+' عنصر';return'؟'}
+function rescueBackup(){
+  const out={};RESCUE_KEYS.forEach(k=>{const v=rescueRead(k);if(v!=null)out[k]=v});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
+  a.download='sakr-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function rescueUpload(){
+  if(typeof firebase==='undefined'){alert('فايربيز لسه بيحمل — استنى 5 ثواني وجرب تاني');return}
+  try{firebase.initializeApp(FIREBASE_CONFIG)}catch(e){}
+  const db=firebase.database();
+  RESCUE_KEYS.forEach((k,i)=>{
+    const v=rescueRead(k);if(v==null)return;
+    const empty=(Array.isArray(v)&&!v.length)||(!Array.isArray(v)&&typeof v==='object'&&!Object.keys(v).length);
+    if(empty){db.ref('sakr/'+k).remove();return}
+    db.ref('sakr/'+k).set({t:Date.now()+i,d:v});
+  });
+  alert('تم رفع بيانات الجهاز للسحابة ✅\n\nدلوقتي افتح الموقع من غير كلمة rescue في اللينك — هتلاقي كل حاجة رجعت.');
+}
+function rescueMode(){
+  const rows=RESCUE_KEYS.map(k=>{
+    const v=rescueRead(k);
+    const mt=parseInt(localStorage.getItem('sakr_mt_'+k)||'0');
+    const when=mt?new Date(mt).toLocaleString('ar-EG'):'—';
+    return '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">'+k+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+rescueCount(v)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+when+'</td></tr>';
+  }).join('');
+  document.body.innerHTML='<div style="max-width:760px;margin:2rem auto;padding:1.5rem;font-family:Tahoma,sans-serif;direction:rtl;text-align:right;background:#fffdf5;border:2px solid #d4a017;border-radius:14px">'
+   +'<h2 style="margin-top:0">🚨 وضع الإنقاذ — بيانات الجهاز ده</h2>'
+   +'<p>السحابة <b>مقطوعة عمدًا</b> في الوضع ده — مفيش حاجة هتمسح البيانات اللي على الجهاز. راجع الأرقام تحت: لو فيه سجلات كتير، الجهاز ده معاه نسخة كاملة.</p>'
+   +'<table style="width:100%;border-collapse:collapse;margin:1rem 0;background:#fff">'+rows+'</table>'
+   +'<button onclick="rescueBackup()" style="background:#1565c0;color:#fff;border:0;padding:12px 18px;border-radius:10px;font-size:1rem;cursor:pointer;margin-left:8px">⬇️ تنزيل نسخة احتياطية</button>'
+   +'<button onclick="rescueUpload()" style="background:#2e7d32;color:#fff;border:0;padding:12px 18px;border-radius:10px;font-size:1rem;cursor:pointer">⬆️ رفع بيانات الجهاز للسحابة</button>'
+   +'<p style="color:#a00;font-size:.85rem;margin-top:1rem">⚠️ لو الأرقام كلها صغيرة/فاضية على الجهاز ده، اقفل الصفحة من غير ما تدوس حاجة — وافتح نفس اللينك على جهاز تاني.</p></div>';
+}
 function initFirebase(){
+  if(RESCUE)return; /* وضع الإنقاذ: ممنوع أي اتصال بالسحابة عشان ماتتمسحش البيانات المحلية */
   if(!FIREBASE_CONFIG.apiKey)return;
   if(typeof firebase==='undefined'){
     FB.loadFailed=true;
@@ -695,7 +734,7 @@ function initFirebase(){
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
     ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(k=>{
       /* بيانات محلية قديمة (قبل نظام الطوابع): اعتبرها "معدّلة دلوقتي" عشان متتبدلش بنسخة قديمة من السحابة */
-      if(!localStorage.getItem('sakr_mt_'+k))localStorage.setItem('sakr_mt_'+k,localStorage.getItem('sakr_'+k)?Date.now():0);
+      if(!localStorage.getItem('sakr_mt_'+k))localStorage.setItem('sakr_mt_'+k,'0'); /* أول مزامنة: السحابة تكسب — عشان نسخة قديمة على جهاز ماتمسحش البيانات */
       FB.db.ref('sakr/'+k).on('value',s=>{
         const v=s.val();
         const mt=parseInt(localStorage.getItem('sakr_mt_'+k)||'0');
@@ -1788,7 +1827,7 @@ window.addEventListener('load',()=>setTimeout(()=>{
   if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone&&!localStorage.getItem('sakr_no_install'))
     document.getElementById('installBar').style.display='flex';
 },4000));
-initFirebase();applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals();
+if(RESCUE){rescueMode()}else{initFirebase();applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals()}
 if(dashSession)openAdmin();
 </script>
 <!-- مفتاح التوقيع — متحقن من Workflow، موجود هنا عشان ميتمسحش -->
