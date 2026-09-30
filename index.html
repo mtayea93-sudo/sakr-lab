@@ -846,7 +846,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function normPhone(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0020'))d=d.slice(4);if(d.startsWith('01')&&d.length===11)d='2'+d;return d}
 function waLink(phone,msg){return 'https://wa.me/'+normPhone(phone)+'?text='+encodeURIComponent(msg)}
 function compressImage(file,maxDim,q){return new Promise(res=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q))};img.src=e.target.result};r.readAsDataURL(file)})}
-function refreshAll(){applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}if(dashSession&&document.getElementById('dash').classList.contains('open'))renderDash()}
+function refreshAll(){if(RESCUE)return;applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}const _d=document.getElementById('dash');if(dashSession&&_d&&_d.classList.contains('open'))renderDash()}
 
 /* ================= Site Content ================= */
 function renderSite(){
