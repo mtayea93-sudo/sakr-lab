@@ -1,7 +1,7 @@
 /* Service Worker — معامل صقر (PWA + إشعارات FCM)
    استراتيجية: الشبكة أولاً (Network-First) — التحديثات توصل للتطبيق المثبت فوراً
    مع كاش احتياطي لو مفيش نت */
-const CACHE = 'sakr-v2';
+const CACHE = 'sakr-v3';
 const ASSETS = ['./','./index.html','./logo.jpeg','./iflash1800.png','./icon-192.png','./icon-512.png','./manifest.json'];
 
 self.addEventListener('install', e => {
@@ -18,7 +18,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request).then(res => {
+    fetch(e.request, {cache: 'no-cache'}).then(res => {
       /* نجح التحميل من الشبكة: خزّن نسخة جديدة وقدّمها فوراً */
       if (res.ok) {
         const copy = res.clone();
