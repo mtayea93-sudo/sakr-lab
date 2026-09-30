@@ -670,7 +670,18 @@ const FIREBASE_CONFIG={
 /* ================= Data Layer ================= */
 const DBL={
   get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem('sakr_'+k));return v==null?d:v}catch(e){return d}},
-  set:(k,v)=>{const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){}if(FB.ready){try{const empty=(Array.isArray(v)&&v.length===0)||(!Array.isArray(v)&&v&&typeof v==='object'&&Object.keys(v).length===0);if(empty)FB.db.ref('sakr/'+k).remove();else FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}}
+  set:(k,v)=>{
+    const empty=(Array.isArray(v)&&v.length===0)||(!Array.isArray(v)&&v&&typeof v==='object'&&Object.keys(v).length===0);
+    if(empty&&!window._emptyOk){
+      const cur=DBL.get(k,Array.isArray(v)?[]:{});
+      const hasCur=(Array.isArray(cur)&&cur.length>0)||(!Array.isArray(cur)&&cur&&typeof cur==='object'&&Object.keys(cur).length>0);
+      if(hasCur){
+        if(!confirm('⚠️ تحذير أمني: فيه عملية هتمسح كل بيانات "'+k+'" من السحابة!\nلو قاصدها دوس OK، لو مش قاصدها دوس إلغاء فورًا.'))return;
+        window._emptyOk=true;
+      }
+    }
+    const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){}if(FB.ready){try{if(empty)FB.db.ref('sakr/'+k).remove();else FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}
+  }
 };
 const FB={ready:false,db:null,connected:false,loadFailed:false};
 function applyCloudData(k,v){
