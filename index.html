@@ -1820,8 +1820,8 @@ document.querySelectorAll('.stat b').forEach(el=>cntIO.observe(el));
 /* تسجيل عامل الخدمة (PWA) */
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});setInterval(()=>{navigator.serviceWorker.getRegistration().then(r=>{if(r)r.update()})},60*60*1000);}
 /* لو سكريبتات Firebase اتأخرت، حاول تاني */
-window.addEventListener('load',()=>setTimeout(()=>{if(typeof firebase!=='undefined'&&!FB.ready)initFirebase()},2500));
-window.addEventListener('load',()=>setTimeout(()=>{if(typeof firebase!=='undefined'&&!FB.ready)initFirebase()},8000));
+window.addEventListener('load',()=>setTimeout(()=>{if(!RESCUE&&typeof firebase!=='undefined'&&!FB.ready)initFirebase()},2500));
+window.addEventListener('load',()=>setTimeout(()=>{if(!RESCUE&&typeof firebase!=='undefined'&&!FB.ready)initFirebase()},8000));
 /* تلميح التثبيت على الآيفون (Apple مابتدعمش برومبت التثبيت التلقائي) */
 window.addEventListener('load',()=>setTimeout(()=>{
   if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone&&!localStorage.getItem('sakr_no_install'))
