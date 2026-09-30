@@ -1760,11 +1760,12 @@ function dismissAlarm(){document.getElementById('alarmModal').style.display='non
 function alarmOpenBooking(){dismissAlarm();activeTab='bookings';renderDash()}
 
 /* ================= WOW Effects ================= */
-window.addEventListener('load',()=>setTimeout(()=>document.getElementById('preloader').classList.add('done'),1300));
+window.addEventListener('load',()=>setTimeout(()=>{if(RESCUE)return;const p=document.getElementById('preloader');if(p)p.classList.add('done')},1300));
 window.addEventListener('scroll',()=>{
+  if(RESCUE)return;
   const h=document.documentElement;
-  document.getElementById('scrollProgress').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
-  document.getElementById('toTop').classList.toggle('show',h.scrollTop>500);
+  const sp=document.getElementById('scrollProgress');if(sp)sp.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+  const tt=document.getElementById('toTop');if(tt)tt.classList.toggle('show',h.scrollTop>500);
 });
 const revealIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');revealIO.unobserve(e.target)}}),{threshold:.12});
 function initReveals(){
