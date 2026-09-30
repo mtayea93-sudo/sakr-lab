@@ -783,6 +783,7 @@ let chosenTests={};
 let chats=DBL.get('chats',[]);
 let stats=DBL.get('stats',{visits:0,logins:0,signups:0});
 let activity=DBL.get('activity',[]);
+let notifs=DBL.get('notifs',{});
 let chatThread=null;
 /* حراسة الأنواع — بعد كل التعريفات */
 if(!Array.isArray(users))users=[];
