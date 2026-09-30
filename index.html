@@ -1179,8 +1179,18 @@ function vOverview(c){
   '<div class="admin-stat"><b>'+prices.length+'</b><span>تحليل بالقائمة</span></div>'+
   '<div class="admin-stat"><b>'+devices.length+'</b><span>جهاز معروض</span></div>'+
   '<div class="admin-stat"><b>'+Object.keys(results).length+'</b><span>نتيجة مرفوعة</span></div></div>'+
-  '<div class="dash-card"><h3>حالة الاتصال</h3><p class="hint" style="font-weight:800;font-size:.95rem">'+connStatus+'</p></div>';
+  '<div class="dash-card"><h3>حالة الاتصال</h3><p class="hint" style="font-weight:800;font-size:.95rem">'+connStatus+'</p>'+
+  '<button class="reciter-btn primary" style="margin-top:10px" onclick="restoreFromCloud()">☁️ استعادة البيانات من السحابة</button>'+
+  '<p class="hint" style="margin-top:6px">لو البيانات ظاهرة ناقصة أو قديمة على الجهاز ده — دوس الزرار ده عشان تمسح النسخة المحلية وتجيب آخر نسخة من Firebase</p></div>';
 }
+window.restoreFromCloud=function(){
+  if(!FB.ready){toast('Firebase مش متصل — الاستعادة مش متاحة دلوقتي',1);return}
+  if(!confirm('هيتم مسح النسخة المحلية على الجهاز ده وجلب كل البيانات من السحابة. متأكد؟'))return;
+  ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(function(k){
+    localStorage.removeItem('sakr_'+k);localStorage.removeItem('sakr_mt_'+k);
+  });
+  location.reload();
+};
 function nextFileNo(){
   let n=2000+bookings.filter(b=>b.fileNo).length;
   let no='SL-'+n;
