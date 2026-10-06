@@ -1,6 +1,40 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
+<script>
+(function () {
+  var V = 'sakr-2026-10-07';
+  window.APP_VERSION = V;
+  function nukedReload() {
+    if (window.__nuking) return; window.__nuking = true;
+    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+    if ('caches' in window) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); });
+    setTimeout(function () { location.reload(); }, 300);
+  }
+  async function checkVersion() {
+    try {
+      var r = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' });
+      var j = await r.json();
+      if (j && j.v && j.v !== V) nukedReload();
+    } catch (e) {}
+  }
+  checkVersion();
+  setInterval(checkVersion, 45000);
+  if ('serviceWorker' in navigator) {
+    var hadController = !!navigator.serviceWorker.controller;
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || refreshing) return;
+      refreshing = true; location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+    setInterval(function () {
+      navigator.serviceWorker.getRegistration().then(function (reg) { if (reg) reg.update(); });
+    }, 45000);
+  }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>معامل صقر للتحاليل الطبية في دكرنس | حجز زيارة منزلية لسحب العينات</title>
@@ -683,11 +717,32 @@ const DBL={
     const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){}if(FB.ready){try{if(empty)FB.db.ref('sakr/'+k).remove();else FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}
   }
 };
+/* ================= الأمان: تشفير كلمات المرور + توقيع الجلسة =================
+   كل كلمة سر بتتخزن SHA-256 + Salt فريد — والنص الصريح القديم بيترقّي تلقائياً أول دخولة.
+   الجلسة موقّعة: تعديلها من كونسول المتصفح يفصلك فوراً. */
+const SEC=(()=>{
+  const enc=new TextEncoder();
+  const rnd=n=>{const b=new Uint8Array(n);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')};
+  const sha=async s=>{const b=await crypto.subtle.digest('SHA-256',enc.encode(s));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')};
+  const hashNew=async p=>{const salt=rnd(16);return{salt,pass:await sha(salt+':'+p)}};
+  const verify=async(rec,p)=>{
+    if(!rec)return{ok:false};
+    if(rec.salt&&rec.pass){return{ok:(await sha(rec.salt+':'+p))===rec.pass}}
+    if(rec.pass===p){const h=await hashNew(p);return{ok:true,upgraded:true,rec:h}}
+    return{ok:false};
+  };
+  const cyrb=(s,seed)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677)}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return(4294967296*(2097151&h2)+(h1>>>0)).toString(36)};
+  const dashSecret=()=>{const a=(settings&&(settings.adminSalt||settings.adminPass))||'';return 'sakr|'+a};
+  const signDash=ds=>{const s=dashSecret()+'|'+JSON.stringify({t:ds.type,ph:ds.phone||''});return cyrb(s,7)+cyrb(s.split('').reverse().join(''),13)};
+  const dashTampered=()=>{if(!dashSession)return false;try{return !dashSession.sig||dashSession.sig!==signDash(dashSession)}catch(e){return true}};
+  return{hashNew,verify,dashTampered,signDash};
+})();
+
 const FB={ready:false,db:null,connected:false,loadFailed:false};
 function applyCloudData(k,v){
   if((k==='users'||k==='bookings'||k==='prices'||k==='activity'||k==='chats'||k==='devices')&&!Array.isArray(v))v=[];
   if((k==='results'||k==='settings'||k==='site'||k==='stats'||k==='notifs')&&(!v||typeof v!=='object'||Array.isArray(v)))v=(k==='stats')?{visits:0,logins:0,signups:0}:{};
-  if(k==='settings')v=Object.assign({wa:'201095756594',adminPass:'sakr2026'},v);
+  if(k==='settings')v=Object.assign({wa:'201095756594',adminPass:'mhmd@1993'},v);
   if(k==='site')v=Object.assign({},SITE_DEFAULT,v);
   if(k==='users')users=v;else if(k==='bookings')bookings=v;else if(k==='prices')prices=v;
   else if(k==='results')results=v;else if(k==='devices')devices=v;else if(k==='site')site=v;
@@ -742,6 +797,7 @@ function initFirebase(){
   }
   try{
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
+    if(firebase.auth){firebase.auth().signInAnonymously().then(()=>{FB.authed=true}).catch(e=>console.warn('auth:',e.code))}
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
     ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(k=>{
       /* بيانات محلية قديمة (قبل نظام الطوابع): اعتبرها "معدّلة دلوقتي" عشان متتبدلش بنسخة قديمة من السحابة */
@@ -819,7 +875,7 @@ let users=DBL.get('users',[]);
 let bookings=DBL.get('bookings',[]);
 let prices=DBL.get('prices',[]);
 let results=DBL.get('results',{});
-let settings=DBL.get('settings',{wa:'201095756594',adminPass:'sakr2026'});
+let settings=DBL.get('settings',{wa:'201095756594',adminPass:'mhmd@1993'});
 if(settings.wa==='201065756591'||settings.wa==='201060651837'){settings.wa='201095756594';DBL.set('settings',settings)}
 let site=DBL.get('site',SITE_DEFAULT);
 if(DBL.get('siteVer',0)!==2){site.phones=SITE_DEFAULT.phones.slice();site.whats=SITE_DEFAULT.whats.slice();DBL.set('site',site);DBL.set('siteVer',2)}
@@ -843,7 +899,7 @@ if(!Array.isArray(activity))activity=[];
 if(!Array.isArray(chats))chats=[];
 if(!Array.isArray(devices))devices=[];
 if(!results||typeof results!=='object'||Array.isArray(results))results={};
-if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={wa:'201095756594',adminPass:'sakr2026'};
+if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={wa:'201095756594',adminPass:'mhmd@1993'};
 if(!site||typeof site!=='object'||Array.isArray(site))site=Object.assign({},SITE_DEFAULT);
 if(!stats||typeof stats!=='object'||Array.isArray(stats))stats={visits:0,logins:0,signups:0};
 if(!notifs||typeof notifs!=='object'||Array.isArray(notifs))notifs={};
@@ -857,7 +913,8 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function normPhone(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0020'))d=d.slice(4);if(d.startsWith('01')&&d.length===11)d='2'+d;return d}
 function waLink(phone,msg){return 'https://wa.me/'+normPhone(phone)+'?text='+encodeURIComponent(msg)}
 function compressImage(file,maxDim,q){return new Promise(res=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q))};img.src=e.target.result};r.readAsDataURL(file)})}
-function refreshAll(){if(RESCUE)return;applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}const _d=document.getElementById('dash');if(dashSession&&_d&&_d.classList.contains('open'))renderDash()}
+function refreshAll(){if(RESCUE)return;
+  if(dashSession&&SEC.dashTampered()){dashSession=null;sessionStorage.removeItem('sakr_dash');toast('تم تسجيل خروجك لأسباب أمنية',true);closeDash();return}applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}const _d=document.getElementById('dash');if(dashSession&&_d&&_d.classList.contains('open'))renderDash()}
 
 /* ================= Site Content ================= */
 function renderSite(){
@@ -903,27 +960,30 @@ function switchAuth(mode){
   document.getElementById('tabLogin').classList.toggle('active',mode==='login');
   document.getElementById('tabRegister').classList.toggle('active',mode==='register');
 }
-function doRegister(){
+async function doRegister(){
   const name=rgName.value.trim(),phone=rgPhone.value.trim(),addr=rgAddress.value.trim(),p1=rgPass.value,p2=rgPass2.value;
   if(!name||!phone||!addr)return toast('من فضلك املأ كل البيانات المطلوبة',true);
   if(!/^01[0-9]{9}$/.test(phone))return toast('رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01',true);
   if(p1.length<4)return toast('كلمة المرور لازم تكون 4 أحرف على الأقل',true);
   if(p1!==p2)return toast('كلمتي المرور غير متطابقتين',true);
   if(users.some(u=>u.phone===phone))return toast('الرقم ده مسجل قبل كده، سجل دخولك',true);
-  users.push({name,phone,addr,pass:p1,role:'customer',perms:[],active:true});
+  const hp=await SEC.hashNew(p1);
+  users.push({name,phone,addr,salt:hp.salt,pass:hp.pass,role:'customer',perms:[],active:true});
   stats.signups++;DBL.set('stats',stats);logAct('🆕 عميل جديد سجل: '+name+' ('+phone+')');
   DBL.set('users',users);
   session=phone;DBL.set('session',session);
   closeModal('authModal');renderAuth();toast('أهلاً بيك '+name+'! حسابك اتعمل بنجاح');
 }
-function doLogin(){
-  const u=users.find(x=>x.phone===liPhone.value.trim()&&x.pass===liPass.value&&x.active!==false);
-  if(!u)return toast('رقم التليفون أو كلمة المرور غلط',true);
+async function doLogin(){
+  const u=users.find(x=>x.phone===liPhone.value.trim()&&x.active!==false);
+  const v=await SEC.verify(u,liPass.value);
+  if(!v.ok)return toast('رقم التليفون أو كلمة المرور غلط',true);
+  if(v.upgraded){u.salt=v.rec.salt;u.pass=v.rec.pass;DBL.set('users',users)}
   stats.logins++;DBL.set('stats',stats);logAct('\uD83D\uDD11 '+u.name+' سجل دخول للموقع');
   session=u.phone;DBL.set('session',session);
   closeModal('authModal');renderAuth();toast('أهلاً بيك تاني يا'+u.name);
   if(u.role==='staff'){
-    dashSession={type:'staff',phone:u.phone};
+    dashSession={type:'staff',phone:u.phone};dashSession.sig=SEC.signDash(dashSession);
     sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));
     openAdmin();toast('👋 ده حساب موظف — فتحنالك اللوحة على طول');
   }
@@ -1059,13 +1119,15 @@ function renderMyBookings(){
   ).join('');
 }
 
-function changePass(){
+async function changePass(){
   const u=currentUser();if(!u)return toast('سجل دخولك الأول',true);
   const o=document.getElementById('cpOld').value,p1=document.getElementById('cpNew').value,p2=document.getElementById('cpNew2').value;
-  if(o!==u.pass)return toast('كلمة المرور الحالية غلط',true);
+  const vo=await SEC.verify(u,o);
+  if(!vo.ok)return toast('كلمة المرور الحالية غلط',true);
+  if(vo.upgraded){u.salt=vo.rec.salt;u.pass=vo.rec.pass}
   if(p1.length<4)return toast('كلمة المرور الجديدة لازم 4 أحرف على الأقل',true);
   if(p1!==p2)return toast('كلمتي المرور الجديدتين غير متطابقتين',true);
-  u.pass=p1;DBL.set('users',users);
+  const hp=await SEC.hashNew(p1);u.salt=hp.salt;u.pass=hp.pass;DBL.set('users',users);
   document.getElementById('cpOld').value='';document.getElementById('cpNew').value='';document.getElementById('cpNew2').value='';
   toast('🔒 كلمة المرور اتحغيرت بنجاح — استخدمها في المرة الجاية');
 }
@@ -1172,6 +1234,7 @@ function dashUser(){return isMaster()?null:users.find(u=>u.phone===dashSession.p
 function can(p){if(isMaster())return true;const u=dashUser();return!!(u&&u.perms&&u.perms.includes(p))}
 
 function openAdmin(){
+  if(SEC.dashTampered()){dashSession=null;sessionStorage.removeItem('sakr_dash');toast('تم تسجيل خروجك لأسباب أمنية',true);return}
   document.getElementById('dash').classList.add('open');
   document.body.style.overflow='hidden';
   if(dashSession){document.getElementById('dashLoginView').style.display='none';document.getElementById('dashMainView').style.display='block';renderDash();startTicker()}
@@ -1184,14 +1247,25 @@ function dashLoginMode(m){
   document.getElementById('dTabMaster').classList.toggle('active',m==='master');
   document.getElementById('dTabStaff').classList.toggle('active',m==='staff');
 }
-function dashLoginMaster(){
-  if(dMasterPass.value===settings.adminPass){dashSession={type:'master'};sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));dMasterPass.value='';openAdmin();toast('أهلاً بيك يا مدير المعمل')}
-  else toast('كلمة المرور غلط',true);
+async function dashLoginMaster(){
+  let v=await SEC.verify({salt:settings.adminSalt,pass:settings.adminPass},dMasterPass.value);
+  /* الترحيل الإجباري: أي دخول بالباسورد القديم sakr2026 يحوّل الحساب للجديد mhmd@1993 */
+  if(dMasterPass.value==='sakr2026'&&(v.ok||settings.adminPass==='sakr2026'||settings.adminPass==='mhmd@1993')){
+    const hp=await SEC.hashNew('mhmd@1993');settings.adminPass=hp.pass;settings.adminSalt=hp.salt;DBL.set('settings',settings);v={ok:true};
+    toast('🔒 كلمة السر اتحدثت — من دلوقتي استخدم mhmd@1993');
+  }
+  if(!v.ok)return toast('كلمة المرور غلط',true);
+  if(v.upgraded){settings.adminPass=v.rec.pass;settings.adminSalt=v.rec.salt;DBL.set('settings',settings)}
+  dashSession={type:'master'};dashSession.sig=SEC.signDash(dashSession);
+  sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));dMasterPass.value='';openAdmin();toast('أهلاً بيك يا مدير المعمل');
 }
-function dashLoginStaff(){
-  const u=users.find(x=>x.phone===dStaffPhone.value.trim()&&x.pass===dStaffPass.value&&x.role==='staff'&&x.active!==false);
-  if(!u)return toast('بيانات الموظف غلط أو الحساب موقوف',true);
-  dashSession={type:'staff',phone:u.phone};sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));
+async function dashLoginStaff(){
+  const u=users.find(x=>x.phone===dStaffPhone.value.trim()&&x.role==='staff'&&x.active!==false);
+  const v=await SEC.verify(u,dStaffPass.value);
+  if(!v.ok||!u)return toast('بيانات الموظف غلط أو الحساب موقوف',true);
+  if(v.upgraded){u.salt=v.rec.salt;u.pass=v.rec.pass;DBL.set('users',users)}
+  dashSession={type:'staff',phone:u.phone};dashSession.sig=SEC.signDash(dashSession);
+  sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));
   dStaffPhone.value='';dStaffPass.value='';openAdmin();toast('أهلاً بيك يا '+u.name);
 }
 function dashLogout(){dashSession=null;sessionStorage.removeItem('sakr_dash');localStorage.removeItem('sakr_dashSession');closeDash();toast('تم تسجيل خروج اللوحة')}
@@ -1435,7 +1509,7 @@ function vUsers(c){
   '<div class="grid2">'+
   '<div class="field"><label>الاسم</label><input id="usName" value="'+(eu?esc(eu.name):'')+'"></div>'+
   '<div class="field"><label>رقم التليفون</label><input id="usPhone" placeholder="01xxxxxxxxx" value="'+(eu?esc(eu.phone):'')+'"></div>'+
-  '<div class="field"><label>كلمة المرور</label><input id="usPass" value="'+(eu?esc(eu.pass):'')+'"></div>'+
+  '<div class="field"><label>كلمة المرور</label><input id="usPass" placeholder="'+(eu?'سيبها فاضية لو مش عايز تغيرها':'كلمة سر قوية')+'"></div>'+
   '<div class="field"><label>الحالة</label><select id="usActive"><option value="1" '+(!eu||eu.active!==false?'selected':'')+'>نشط</option><option value="0" '+(eu&&eu.active===false?'selected':'')+'>موقوف</option></select></div></div>'+
   '<label>الصلاحيات:</label><div class="perm-grid">'+
   PERMS.map(p=>'<label><input type="checkbox" class="permChk" value="'+p.k+'" '+((eu?(eu.perms||[]):[]).includes(p.k)?'checked':'')+'> '+p.l+'</label>').join('')+'</div>'+
@@ -1445,27 +1519,32 @@ function vUsers(c){
   (rows||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا يوجد موظفون</td></tr>')+'</tbody></table></div></div>';
 }
 function editStaff(i){editUserIdx=i;renderDash()}
-function addUser(){
+/* حفظ موظف بكلمة سر جديدة أو بالمشفرة القديمة (salt/pass مباشرة) */
+async function finishUserSave(n,p,pw,keepSalt,perms,keepPass){
+  const active=usActive.value==='1';
+  let salt=keepSalt,pass=pw;
+  if(!keepSalt){const hp=await SEC.hashNew(pw);salt=hp.salt;pass=hp.pass}
+  else if(!keepPass&&keepSalt){const hp=await SEC.hashNew(pw);salt=hp.salt;pass=hp.pass}
+  if(editUserIdx>=0){
+    if(users.some((x,xi)=>xi!==editUserIdx&&x.phone===p))return toast('الرقم مسجل لشخص تاني',true);
+    const u=users[editUserIdx];
+    u.name=n;u.phone=p;u.salt=salt;u.pass=pass;u.perms=perms;u.active=active;
+    editUserIdx=-1;
+  }else{
+    const ex=users.find(x=>x.phone===p);
+    if(ex){ex.name=n;ex.salt=salt;ex.pass=pass;ex.role='staff';ex.perms=perms;ex.active=active;toast('ℹ️ الرقم كان حساب عميل — اتحوّل لموظف وبياناته محفوظة')}
+    else users.push({name:n,phone:p,addr:'',salt,pass,role:'staff',perms,active});
+  }
+  DBL.set('users',users);renderDash();toast('تم الحفظ ✅');
+}
+async function addUser(){
   const n=usName.value.trim(),p=usPhone.value.trim(),pw=usPass.value.trim();
+  if(editUserIdx>=0&&!pw){const oldU=users[editUserIdx];return finishUserSave(n,p,oldU.pass,oldU.salt,Array.from(document.querySelectorAll('.permChk:checked')).map(x=>x.value),true)}
   if(!n||!p||!pw)return toast('املأ كل البيانات',true);
   if(!/^01[0-9]{9}$/.test(p))return toast('رقم التليفون لازم يكون 11 رقم يبدأ بـ 01',true);
   const perms=Array.from(document.querySelectorAll('.permChk:checked')).map(x=>x.value);
   const active=usActive.value==='1';
-  if(editUserIdx>=0){
-    if(users.some((x,xi)=>xi!==editUserIdx&&x.phone===p))return toast('الرقم مسجل لشخص تاني',true);
-    const u=users[editUserIdx];
-    u.name=n;u.phone=p;u.pass=pw;u.perms=perms;u.active=active;
-    editUserIdx=-1;
-  }else{
-    const ex=users.find(x=>x.phone===p);
-    if(ex){
-      ex.name=n;ex.pass=pw;ex.role='staff';ex.perms=perms;ex.active=active;
-      toast('ℹ️ الرقم كان حساب عميل — اتحوّل لموظف وبياناته محفوظة');
-    }else{
-      users.push({name:n,phone:p,addr:'',pass:pw,role:'staff',perms,active});
-    }
-  }
-  DBL.set('users',users);renderDash();toast('تم الحفظ ✅');
+  return finishUserSave(n,p,pw,'',perms);
 }
 function vCustomers(c){
   const custs=users.map((u,i)=>({u,i})).filter(x=>x.u.role!=='staff');
@@ -1541,11 +1620,11 @@ function vSettings(c){
   '<p class="hint" style="margin-top:.6rem">رقم الواتساب ده بيستقبل طلبات التسعير من الموقع.</p>'+
   (FB.ready?'':'<p class="hint" style="color:#e68900;font-weight:800">⚠️ فعّل Firebase عشان البيانات تتزامن على كل الأجهزة — الصق الإعدادات في FIREBASE_CONFIG في كود الملف.</p>')+'</div>';
 }
-function saveSettings(){
+async function saveSettings(){
   if(!isMaster())return toast('الإعدادات للمشرف العام فقط',true);
   const wa=setWa.value.trim(),p=setAdminPass.value.trim();
   if(wa)settings.wa=normPhone(wa);
-  if(p){if(p.length<4)return toast('كلمة المرور قصيرة',true);settings.adminPass=p}
+  if(p){if(p.length<4)return toast('كلمة المرور قصيرة',true);const hp=await SEC.hashNew(p);settings.adminPass=hp.pass;settings.adminSalt=hp.salt}
   DBL.set('settings',settings);applySettings();toast('تم حفظ الإعدادات ✅');
 }
 
