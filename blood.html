@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<!-- 🔄 تحديث إجباري خاص ببنك الدم — منفصل عن نسخة الموقع الرئيسي -->
+<script>
+(function () {
+  var V = 'blood-2026-10-12a';
+  window.BLOOD_VERSION = V;
+  function nukedReload() {
+    if (window.__nuking) return; window.__nuking = true;
+    if ('caches' in window) caches.keys().then(function (ks) { ks.forEach(function (k) { if (k.indexOf('blood') === 0) caches.delete(k); }); });
+    setTimeout(function () { location.reload(); }, 300);
+  }
+  async function checkVersion() {
+    try {
+      var r = await fetch('blood-version.json?ts=' + Date.now(), { cache: 'no-store' });
+      var j = await r.json();
+      if (j && j.v && j.v !== V) nukedReload();
+    } catch (e) {}
+  }
+  checkVersion();
+  setInterval(checkVersion, 60000);
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🩸 بنك الدم — نظام متبرعي الدم | معامل صقر</title>
+<meta name="robots" content="noindex">
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="mtayea-signature.js"></script>
+<script src="https://m-tayea.mtayea.com/signature/mtayea-track.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#e74c3c 0%,#c0392b 55%,#8e44ad 100%);min-height:100vh;padding:16px}
+.wrap{max-width:960px;margin:0 auto}
+.head{text-align:center;color:#fff;padding:22px 0 14px}
+.head h1{font-size:2rem;text-shadow:2px 2px 6px rgba(0,0,0,.3)}
+.head p{opacity:.92;margin-top:4px}
+.card{background:#fff;border-radius:18px;padding:22px;margin-bottom:16px;box-shadow:0 10px 40px rgba(0,0,0,.18)}
+.field{margin-bottom:14px}
+.field label{display:block;margin-bottom:6px;font-weight:600;font-size:.9rem;color:#333}
+.inp{width:100%;padding:12px 14px;border:2px solid #e3e3e3;border-radius:10px;font-size:1rem;font-family:inherit}
+.inp:focus{outline:none;border-color:#e74c3c;box-shadow:0 0 0 4px rgba(231,76,60,.1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.btn{border:none;padding:12px 26px;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:linear-gradient(135deg,#e74c3c,#c0392b);transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(231,76,60,.35)}
+.btn-o{background:#fff;color:#c0392b;border:2px solid #e0b4b4}
+.btn-o:hover{box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.btn-sm{padding:6px 12px;font-size:.82rem}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:11px 10px;text-align:right;border-bottom:1px solid #f0f0f0}
+th{background:#c0392b;color:#fff;font-weight:600}
+tr:hover td{background:#fafafa}
+.empty{text-align:center;color:#999;padding:26px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:#fdf3f2;border:1px solid #f3d4d0;border-radius:14px;padding:14px;text-align:center}
+.stat .v{font-size:1.6rem;font-weight:800;color:#c0392b}
+.stat .l{color:#777;font-size:.85rem;margin-top:2px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{padding:9px 18px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff;border-radius:999px;cursor:pointer;font-family:inherit;font-size:.92rem}
+.tab.on{background:#fff;color:#c0392b;font-weight:800}
+.badge{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:800;font-size:.8rem}
+.b-a-pos{background:#e8f5e9;color:#2e7d32}.b-a-neg{background:#ffebee;color:#c62828}
+.b-b-pos{background:#e3f2fd;color:#1565c0}.b-b-neg{background:#fff3e0;color:#ef6c00}
+.b-ab-pos{background:#f3e5f5;color:#7b1fa2}.b-ab-neg{background:#eceff1;color:#455a64}
+.b-o-pos{background:#e0f7fa;color:#00838f}.b-o-neg{background:#fce4ec;color:#ad1457}
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:13px 26px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.25);z-index:9999;font-weight:600}
+.toast.err{background:#e74c3c}
+.sync{display:inline-block;padding:4px 12px;border-radius:999px;font-size:.75rem;font-weight:700;background:#eee;color:#777}
+.sync.on{background:#e8f5e9;color:#219a52}
+.alert-box{background:#fffcf3;border:1px solid #f0c36d;border-radius:14px;padding:14px;margin-bottom:14px}
+.alert-box h3{color:#8a6d1a;font-size:.95rem;margin-bottom:8px}
+.login-box{max-width:400px;margin:8vh auto 0;background:#fff;border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-box h1{text-align:center;color:#c0392b;margin-bottom:6px}
+.login-box .sub{text-align:center;color:#888;font-size:.85rem;margin-bottom:20px}
+.chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding:10px 4px 0}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.bar{width:70%;max-width:32px;background:linear-gradient(180deg,#e74c3c,#8e44ad);border-radius:6px 6px 0 0;min-height:2px}
+.col span{font-size:10.5px;color:#888}.col b{font-size:11px;color:#c0392b}
+.hint{background:#e8f0fe;border-right:4px solid #3b82f6;padding:10px 14px;border-radius:10px;color:#0d3c78;font-size:.85rem;margin-bottom:12px}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:#fff;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="root"></div>
+</div>
+<script>
+/* ============================================================
+   🩸 بنك الدم المستقل — معامل صقر
+   السحابة: Firebase RTDB مشروع sakrlab2026 (نفس سحابة موقع صقر)
+   المسار: sakr/bloodDonors + sakr/bloodDonations
+   كلمة المرور: نفس كلمة مرور لوحة تحكم موقع صقر (من sakr/settings)
+   ============================================================ */
+const V = 'blood-2026-10-12a';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAPawpCwihRHOaPjMzhhcsSDa9WAy0Qx-Q",
+  authDomain: "sakrlab2026.firebaseapp.com",
+  databaseURL: "https://sakrlab2026-default-rtdb.firebaseio.com",
+  projectId: "sakrlab2026",
+  storageBucket: "sakrlab2026.firebasestorage.app",
+  messagingSenderId: "1049726811378",
+  appId: "1:1049726811378:web:0959efa43bad0f7e24e46b"
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const toast = (m, err) => { document.querySelectorAll('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); };
+const uid = p => p + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+
+/* ---------- طبقة البيانات: محلي + Firebase ---------- */
+const FB = { ready: false, db: null, connected: false };
+let bloodDonors = [], bloodDonations = [], adminCreds = { adminPass: 'mhmd@1993' };
+
+function localGet(k, d) { try { const v = JSON.parse(localStorage.getItem('blood_' + k)); return v == null ? d : v; } catch (e) { return d; } }
+function localSet(k, v) { try { localStorage.setItem('blood_' + k, JSON.stringify(v)); } catch (e) {} }
+function save(k) {
+  if (!k) { save('bloodDonors'); save('bloodDonations'); return; }
+  const v = k === 'bloodDonors' ? bloodDonors : bloodDonations;
+  localSet(k, v);
+  if (FB.ready) { try { if (!v.length) FB.db.ref('sakr/' + k).remove(); else FB.db.ref('sakr/' + k).set({ t: Date.now(), d: v }); } catch (e) {} }
+}
+function applyCloud(k, v) {
+  if (!Array.isArray(v)) v = [];
+  if (k === 'bloodDonors') bloodDonors = v; else bloodDonations = v;
+  localSet(k, v);
+  if (state.tab) render();
+}
+function initFb() {
+  if (typeof firebase === 'undefined' || !FIREBASE_CONFIG.apiKey) return;
+  try { firebase.initializeApp(FIREBASE_CONFIG); } catch (e) {}
+  FB.db = firebase.database(); FB.ready = true;
+  if (firebase.auth) firebase.auth().signInAnonymously().catch(e => console.warn('auth:', e.code));
+  FB.db.ref('.info/connected').on('value', s => { FB.connected = !!s.val(); updateSyncBadge(); });
+  ['bloodDonors', 'bloodDonations'].forEach(k => {
+    FB.db.ref('sakr/' + k).on('value', s => {
+      const v = s.val();
+      if (v && v.d) {
+        const lv = localGet(k, []);
+        if (JSON.stringify(lv) !== JSON.stringify(v.d)) applyCloud(k, v.d);
+      }
+    });
+  });
+  /* بيانات اعتماد الأدمن من إعدادات صقر (نفس كلمة المرور) */
+  FB.db.ref('sakr/settings').on('value', s => {
+    const v = s.val();
+    if (v && v.d) adminCreds = v.d;
+  });
+}
+function updateSyncBadge() { const el = $('#sync-badge'); if (el) el.className = 'sync ' + (FB.connected ? 'on' : ''); el && (el.textContent = FB.connected ? '☁️ متصل بالسحابة — بيتزامن لحظياً' : '💾 محلي — الشغل محفوظ على الجهاز'); }
+
+/* ---------- الأمان والجلسة ---------- */
+const SEC = (() => {
+  const enc = new TextEncoder();
+  const rnd = n => { const b = new Uint8Array(n); crypto.getRandomValues(b); return Array.from(b, x => x.toString(16).padStart(2, '0')).join(''); };
+  const sha = async s => { const b = await crypto.subtle.digest('SHA-256', enc.encode(s)); return Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, '0')).join(''); };
+  const hashNew = async p => { const salt = rnd(16); return { salt, pass: await sha(salt + ':' + p) }; };
+  const verify = async (rec, p) => {
+    if (!rec) return { ok: false };
+    if (rec.adminSalt && rec.adminPass) return { ok: (await sha(rec.adminSalt + ':' + p)) === rec.adminPass };
+    if (rec.adminPass === p) { const h = await hashNew(p); return { ok: true, upgraded: true, rec: h }; }
+    return { ok: false };
+  };
+  const cyrb = (s, seed) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+  const secret = () => 'sakr-blood|' + ((adminCreds && (adminCreds.adminSalt || adminCreds.adminPass)) || '');
+  const sign = ds => { const s = secret() + '|' + ds.u; return cyrb(s, 7) + cyrb(s.split('').reverse().join(''), 13); };
+  return { verify, sign };
+})();
+const SES_KEY = 'blood_ses';
+function session() { try { return JSON.parse(sessionStorage.getItem(SES_KEY)); } catch (e) { return null; } }
+function setSession(s) { s.sig = SEC.sign(s); sessionStorage.setItem(SES_KEY, JSON.stringify(s)); }
+function sessionTampered() { const s = session(); if (!s) return false; return !s.sig || s.sig !== SEC.sign(s); }
+function logout() { sessionStorage.removeItem(SES_KEY); render(); }
+
+/* ---------- منطق بنك الدم ---------- */
+function badge(t) { const c = { 'A+': 'b-a-pos', 'A-': 'b-a-neg', 'B+': 'b-b-pos', 'B-': 'b-b-neg', 'AB+': 'b-ab-pos', 'AB-': 'b-ab-neg', 'O+': 'b-o-pos', 'O-': 'b-o-neg' }[t]; return t ? `<span class="badge ${c}">${esc(t)}</span>` : '<span style="color:#bbb">—</span>'; }
+function lastDate(d) { const ds = bloodDonations.filter(x => x.donorId === d.id).map(x => x.date).sort(); return ds.length ? ds[ds.length - 1] : (d.lastDonation || ''); }
+function daysSince(d) { const l = lastDate(d); if (!l) return null; return Math.floor((Date.now() - new Date(l).getTime()) / 86400000); }
+function eligible(d) { const l = lastDate(d); return !l || (Date.now() - new Date(l).getTime()) >= 90 * 86400000; }
+function donorDonations(d) { return bloodDonations.filter(x => x.donorId === d.id).length; }
+
+/* ---------- الحالة والتبويبات ---------- */
+const state = { tab: '', q: '', needType: '' };
+function go(t) { state.tab = t; render(); }
+
+/* ---------- التصيير ---------- */
+function render() {
+  const ses = session();
+  if (!ses || sessionTampered()) { sessionStorage.removeItem(SES_KEY); return renderLogin(); }
+  const tabs = [['donors', '📋 المتبرعون'], ['new', '➕ تسجيل متبرع'], ['donations', '🩸 سجل التبرعات'], ['need', '📣 مطلوب متبرعون'], ['stats', '📊 الإحصائيات']];
+  if (!state.tab) state.tab = 'donors';
+  $('#root').innerHTML = `
+    <div class="head"><h1>🩸 بنك الدم</h1><p>نظام متبرعي الدم — ${esc(adminCreds.labName || 'معامل صقر')}</p></div>
+    <div class="topbar">
+      <div class="tabs">${tabs.map(t => `<button class="tab ${state.tab === t[0] ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('')}</div>
+      <span style="flex:1"></span>
+      <span id="sync-badge" class="sync">…</span>
+      <button class="btn btn-o btn-sm" onclick="logout()">⏻ خروج</button>
+    </div>
+    <div id="view"></div>`;
+  updateSyncBadge();
+  const v = $('#view');
+  if (state.tab === 'donors') v.innerHTML = viewDonors();
+  else if (state.tab === 'new') v.innerHTML = viewNew();
+  else if (state.tab === 'donations') v.innerHTML = viewDonations();
+  else if (state.tab === 'need') v.innerHTML = viewNeed();
+  else if (state.tab === 'stats') { v.innerHTML = viewStats(); drawChart(); }
+}
+function renderLogin() {
+  $('#root').innerHTML = `
+  <div class="login-box">
+    <h1>🩸 بنك الدم</h1>
+    <div class="sub">نظام متبرعي الدم — دخول الإدارة<br>نفس كلمة مرور لوحة تحكم موقع صقر</div>
+    <div class="field"><label>كلمة المرور</label><input class="inp" type="password" id="li-pass" placeholder="••••••••"></div>
+    <button class="btn" style="width:100%;justify-content:center" onclick="doLogin()">دخول ⬅</button>
+  </div>`;
+  $('#li-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  setTimeout(() => $('#li-pass')?.focus(), 100);
+}
+async function doLogin() {
+  const p = $('#li-pass').value;
+  const v = await SEC.verify(adminCreds, p);
+  if (!v.ok) return toast('❌ كلمة المرور غير صحيحة', true);
+  if (v.upgraded) {
+    adminCreds = { adminPass: v.rec.pass, adminSalt: v.rec.salt };
+    if (FB.ready) { try { FB.db.ref('sakr/settings').set({ t: Date.now(), d: adminCreds }); } catch (e) {} }
+  }
+  setSession({ u: 'admin', at: Date.now() });
+  state.tab = 'donors';
+  render();
+  toast('✅ أهلاً بيك');
+}
+
+/* ---------- عرض: المتبرعون ---------- */
+function viewDonors() {
+  const ds = bloodDonors;
+  const elig = ds.filter(eligible).length;
+  const overdue = ds.filter(d => { const x = daysSince(d); return x !== null && x >= 97; }).sort((a, b) => daysSince(b) - daysSince(a));
+  return `
+  <div class="stats">
+    <div class="stat"><div class="v">${ds.length}</div><div class="l">إجمالي المتبرعين</div></div>
+    <div class="stat"><div class="v">${elig}</div><div class="l">مؤهل للتبرع دلوقتي</div></div>
+    <div class="stat"><div class="v">${ds.length - elig}</div><div class="l">لسه باقي عليه أيام</div></div>
+    <div class="stat"><div class="v">${bloodDonations.length}</div><div class="l">عملية تبرع</div></div>
+  </div>
+  ${overdue.length ? `<div class="alert-box"><h3>🔔 متأخرين عن التبرع (مؤهلين — اتصل بيهم)</h3>
+    <table><tr><th>الاسم</th><th>الفصيلة</th><th>آخر تبرع</th><th></th></tr>
+    ${overdue.map(d => `<tr><td><b>${esc(d.name)}</b></td><td>${badge(d.bloodType)}</td><td>منذ ${daysSince(d)} يوم</td>
+    <td>${d.phone ? `<a class="btn btn-sm" href="tel:${esc(d.phone)}">📞</a>` : '-'}</td></tr>`).join('')}</table></div>` : ''}
+  <div class="card">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <input class="inp" style="flex:1;min-width:220px" placeholder="🔍 ابحث بالاسم / التليفون / الرقم القومي..." value="${esc(state.q)}" oninput="state.q=this.value;refreshTable()">
+      <button class="btn btn-o" onclick="exportCsv('donors')">📥 Excel</button>
+      <label class="btn btn-o" style="margin:0">📤 استيراد<input type="file" accept=".json" style="display:none" onchange="importJson(event)"></label>
+    </div>
+    <div id="tbl">${donorsTable()}</div>
+  </div>`;
+}
+function donorsTable() {
+  const q = state.q.trim().toLowerCase();
+  const list = !q ? bloodDonors : bloodDonors.filter(d => (d.name || '').toLowerCase().includes(q) || (d.phone || '').includes(q) || (d.nationalId || '').includes(q));
+  if (!list.length) return '<div class="empty">لا يوجد متبرعون — سجل أول متبرع من «➕ تسجيل متبرع»</div>';
+  return `<table><tr><th>#</th><th>الاسم</th><th>الفصيلة</th><th>التليفون</th><th>آخر تبرع</th><th>الحالة</th><th>إجراءات</th></tr>
+  ${list.map((d, i) => {
+    const x = daysSince(d), elig = eligible(d);
+    return `<tr><td>${i + 1}</td>
+    <td><b>${esc(d.name)}</b>${d.nationalId ? `<br><small style="color:#999">${esc(d.nationalId)}</small>` : ''}</td>
+    <td>${badge(d.bloodType)}</td><td dir="ltr">${esc(d.phone || '—')}</td>
+    <td>${x === null ? '<span style="color:#bbb">لم يتبرع</span>' : 'منذ ' + x + ' يوم'}</td>
+    <td>${elig ? '<b style="color:#219a52">✅ مؤهل</b>' : `<b style="color:#e74c3c">⛔ بعد ${97 - x} يوم</b>`}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-sm" onclick="donateModal('${d.id}')">🩸 تبرع</button>
+      <button class="btn btn-o btn-sm" onclick="printCard('${d.id}')">🪪</button>
+      <button class="btn btn-o btn-sm" onclick="editDonor('${d.id}')">✏️</button>
+      <button class="btn btn-sm" style="background:#c0392b" onclick="delDonor('${d.id}')">🗑️</button>
+    </td></tr>`;
+  }).join('')}</table>`;
+}
+function refreshTable() { const el = $('#tbl'); if (el) el.innerHTML = donorsTable(); }
+
+/* ---------- عرض: تسجيل متبرع ---------- */
+function viewNew() {
+  return `<div class="card" style="max-width:620px">
+    ${donorForm('')}
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn" onclick="saveDonor('')">💾 حفظ المتبرع</button>
+      <button class="btn btn-o" onclick="go('donors')">↩️ رجوع</button>
+    </div></div>`;
+}
+function donorForm(d) {
+  return `
+  <div class="field"><label>الاسم الكامل *</label><input class="inp" id="f-name" value="${esc(d.name || '')}"></div>
+  <div class="grid2">
+    <div class="field"><label>الرقم القومي (14 رقم)</label><input class="inp" id="f-nid" maxlength="14" value="${esc(d.nationalId || '')}" oninput="this.value=this.value.replace(/\\D/g,'')"></div>
+    <div class="field"><label>رقم التليفون *</label><input class="inp" id="f-phone" dir="ltr" value="${esc(d.phone || '')}"></div>
+  </div>
+  <div class="grid2">
+    <div class="field"><label>فصيلة الدم</label><select class="inp" id="f-type">
+      <option value="">— مش معروفة —</option>
+      ${['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(t => `<option ${d.bloodType === t ? 'selected' : ''}>${t}</option>`).join('')}
+    </select></div>
+    <div class="field"><label>تاريخ الميلاد</label><input class="inp" type="date" id="f-dob" value="${esc(d.birthDate || '')}"></div>
+  </div>
+  <div class="field"><label>العنوان</label><input class="inp" id="f-addr" value="${esc(d.address || '')}"></div>`;
+}
+function saveDonor(id) {
+  const name = $('#f-name').value.trim(), phone = $('#f-phone').value.trim(), nid = $('#f-nid').value.trim();
+  if (!name) return toast('⚠️ الاسم مطلوب', true);
+  if (!phone) return toast('⚠️ رقم التليفون مطلوب', true);
+  if (nid && nid.length !== 14) return toast('⚠️ الرقم القومي لازم 14 رقم', true);
+  if (!id && nid && bloodDonors.find(d => d.nationalId === nid)) return toast('⚠️ الرقم القومي مسجل قبل كده', true);
+  const rec = { name, phone, nationalId: nid, bloodType: $('#f-type').value, birthDate: $('#f-dob').value, address: $('#f-addr').value.trim() };
+  if (id) { const d = bloodDonors.find(x => x.id === id); if (d) Object.assign(d, rec); toast('✅ تم التحديث'); }
+  else { bloodDonors.push({ id: uid('bd'), ...rec, source: 'manual', lastDonation: '', registeredAt: new Date().toISOString() }); toast('✅ تم التسجيل'); }
+  save('bloodDonors');
+  go('donors');
+}
+function editDonor(id) {
+  const d = bloodDonors.find(x => x.id === id); if (!d) return;
+  state.tab = 'new';
+  render();
+  $('#view').innerHTML = `<div class="card" style="max-width:620px"><h3 style="margin-bottom:12px;color:#c0392b">✏️ تعديل — ${esc(d.name)}</h3>
+    ${donorForm(d)}
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn" onclick="saveDonor('${d.id}')">💾 حفظ</button>
+      <button class="btn btn-o" onclick="go('donors')">إلغاء</button>
+    </div></div>`;
+}
+function delDonor(id) {
+  const d = bloodDonors.find(x => x.id === id); if (!d) return;
+  if (!confirm(`حذف المتبرع «${d.name}» وسجل تبرعاته؟`)) return;
+  bloodDonors = bloodDonors.filter(x => x.id !== id);
+  bloodDonations = bloodDonations.filter(x => x.donorId !== id);
+  save();
+  render();
+  toast('🗑️ تم الحذف');
+}
+
+/* ---------- تبرع ---------- */
+function donateModal(id) {
+  const d = bloodDonors.find(x => x.id === id); if (!d) return;
+  const div = document.createElement('div');
+  div.id = 'modal-bb';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9998;padding:16px';
+  div.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px;width:min(480px,96vw)">
+    <h3 style="margin-bottom:10px;color:#c0392b">🩸 تسجيل تبرع — ${esc(d.name)}</h3>
+    <div class="hint">الفصيلة: ${d.bloodType || 'غير محددة'} — آخر تبرع: ${lastDate(d) || 'لا يوجد'} — ${eligible(d) ? '✅ مؤهل' : '⛔ مش مؤهل لسه'}</div>
+    <div class="grid2">
+      <div class="field"><label>التاريخ *</label><input class="inp" type="date" id="dn-date" value="${today()}"></div>
+      <div class="field"><label>الكمية (وحدة) *</label><input class="inp" type="number" id="dn-qty" min="0.5" step="0.5" value="1"></div>
+    </div>
+    <div class="field"><label>المكان</label><input class="inp" id="dn-place" placeholder="بنك الدم / المستشفى"></div>
+    <div class="field"><label>ملاحظات</label><input class="inp" id="dn-notes"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="saveDonation('${d.id}')">💾 حفظ</button>
+      <button class="btn btn-o" onclick="document.getElementById('modal-bb').remove()">إلغاء</button>
+    </div></div>`;
+  div.onclick = e => { if (e.target === div) div.remove(); };
+  document.body.appendChild(div);
+}
+function saveDonation(donorId) {
+  const date = $('#dn-date').value, qty = +$('#dn-qty').value;
+  if (!date) return toast('⚠️ التاريخ مطلوب', true);
+  if (!qty || qty <= 0) return toast('⚠️ الكمية غير صحيحة', true);
+  const d = bloodDonors.find(x => x.id === donorId);
+  const l = d ? lastDate(d) : '';
+  if (l && date <= l && !confirm('التاريخ ده قبل آخر تبرع — متأكد؟')) return;
+  bloodDonations.push({ id: uid('dn'), donorId, date, qty, place: $('#dn-place').value.trim(), notes: $('#dn-notes').value.trim(), createdAt: new Date().toISOString() });
+  save('bloodDonations');
+  $('#modal-bb')?.remove();
+  render();
+  toast('🩸 تم تسجيل التبرع');
+}
+function delDonation(id) {
+  if (!confirm('حذف عملية التبرع دي؟')) return;
+  bloodDonations = bloodDonations.filter(x => x.id !== id);
+  save('bloodDonations');
+  render();
+  toast('🗑️ تم الحذف');
+}
+
+/* ---------- عرض: سجل التبرعات ---------- */
+function viewDonations() {
+  const list = [...bloodDonations].sort((a, b) => b.date.localeCompare(a.date));
+  const units = bloodDonations.reduce((a, x) => a + (+x.qty || 0), 0);
+  return `<div class="stats">
+    <div class="stat"><div class="v">${bloodDonations.length}</div><div class="l">عملية تبرع</div></div>
+    <div class="stat"><div class="v">${units}</div><div class="l">إجمالي الوحدات</div></div>
+    <div class="stat"><div class="v">${bloodDonations.filter(x => x.date.slice(0, 7) === today().slice(0, 7)).length}</div><div class="l">هذا الشهر</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-o" onclick="exportCsv('donations')">📥 Excel</button>
+      <button class="btn btn-o" onclick="reportModal()">🖨️ تقرير</button>
+    </div>
+    ${!list.length ? '<div class="empty">لا توجد عمليات تبرع — سجل أول تبرع من زرار «🩸 تبرع»</div>' : `
+    <table><tr><th>#</th><th>التاريخ</th><th>المتبرع</th><th>الفصيلة</th><th>الكمية</th><th>المكان</th><th>ملاحظات</th><th></th></tr>
+    ${list.map((x, i) => { const d = bloodDonors.find(z => z.id === x.donorId);
+      return `<tr><td>${i + 1}</td><td>${esc(x.date)}</td><td><b>${esc(d ? d.name : 'محذوف')}</b></td><td>${d ? badge(d.bloodType) : '—'}</td>
+      <td>${x.qty} وحدة</td><td>${esc(x.place || '—')}</td><td>${esc(x.notes || '')}</td>
+      <td><button class="btn btn-sm" style="background:#c0392b" onclick="delDonation('${x.id}')">🗑️</button></td></tr>`; }).join('')}
+    </table>`}
+  </div>`;
+}
+
+/* ---------- عرض: مطلوب متبرعون ---------- */
+function viewNeed() {
+  const t = state.needType;
+  let list = [], inel = [];
+  if (t) {
+    list = bloodDonors.filter(d => d.bloodType === t);
+    inel = list.filter(d => !eligible(d));
+    list = list.filter(eligible).sort((a, b) => (daysSince(a) ?? -1) - (daysSince(b) ?? -1));
+  }
+  return `<div class="card" style="max-width:720px">
+    <div class="field"><label>📣 فصيلة مطلوبة</label>
+      <select class="inp" onchange="state.needType=this.value;render()">
+        <option value="">— اختر الفصيلة —</option>
+        ${['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(x => `<option ${t === x ? 'selected' : ''}>${x}</option>`).join('')}
+      </select></div>
+    ${!t ? '<div class="empty">اختر الفصيلة المطلوبة وهيطلعلك كل المؤهلين فوراً</div>' : ''}
+    ${t && !list.length ? '<div class="empty">لا يوجد متبرعون مؤهلون لهذه الفصيلة حالياً</div>' : ''}
+    ${t && list.length ? `
+      <div class="hint">✅ فيه ${list.length} متبرع مؤهل — مرتبين بالأولوية (الأقدم تبرعاً الأول)
+        <button class="btn btn-o btn-sm" style="margin-right:8px" onclick="printNeed()">🖨️ طباعة القائمة</button></div>
+      <table><tr><th>#</th><th>الاسم</th><th>آخر تبرع</th><th>التليفون</th><th></th></tr>
+      ${list.map((d, i) => `<tr><td>${i + 1}</td><td><b>${esc(d.name)}</b></td>
+        <td>${daysSince(d) === null ? 'لم يتبرع' : 'منذ ' + daysSince(d) + ' يوم'}</td>
+        <td dir="ltr">${esc(d.phone || '—')}</td>
+        <td>${d.phone ? `<a class="btn btn-sm" href="tel:${esc(d.phone)}">📞 اتصال</a>` : '-'}</td></tr>`).join('')}
+      </table>
+      ${inel.length ? `<div class="hint" style="margin-top:12px">⏳ ${inel.length} متبرع من نفس الفصيلة لسه باقي عليهم أيام لحد ما يتأهلوا</div>` : ''}
+    ` : ''}
+  </div>`;
+}
+
+/* ---------- عرض: الإحصائيات ---------- */
+function viewStats() {
+  const byType = {};
+  bloodDonors.forEach(d => { if (d.bloodType) byType[d.bloodType] = (byType[d.bloodType] || 0) + 1; });
+  const counts = {};
+  bloodDonations.forEach(x => { counts[x.donorId] = (counts[x.donorId] || 0) + 1; });
+  const heroes = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([id, n]) => ({ d: bloodDonors.find(z => z.id === id), n })).filter(h => h.d);
+  return `<div class="stats">
+    <div class="stat"><div class="v">${bloodDonors.filter(eligible).length}</div><div class="l">مؤهل الآن</div></div>
+    <div class="stat"><div class="v">${bloodDonations.reduce((a, x) => a + (+x.qty || 0), 0)}</div><div class="l">وحدة دم منذ البداية</div></div>
+    <div class="stat"><div class="v">${bloodDonations.filter(x => x.date.slice(0, 7) === today().slice(0, 7)).length}</div><div class="l">تبرع هذا الشهر</div></div>
+  </div>
+  <div class="card"><h3 style="margin-bottom:10px;color:#c0392b">📊 التبرعات آخر 12 شهر (وحدات)</h3><div class="chart" id="chart"></div></div>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-bottom:10px;color:#c0392b">🧬 المتبرعون حسب الفصيلة</h3>
+      <table><tr><th>الفصيلة</th><th>عدد المتبرعين</th></tr>
+      ${Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([tp, n]) => `<tr><td>${badge(tp)}</td><td>${n}</td></tr>`).join('') || '<tr><td colspan="2" class="empty">لا يوجد</td></tr>'}</table></div>
+    <div class="card"><h3 style="margin-bottom:10px;color:#c0392b">🏆 أنشط المتبرعين</h3>
+      <table><tr><th>#</th><th>الاسم</th><th>تبرعات</th></tr>
+      ${heroes.map((h, i) => `<tr><td>${i + 1}</td><td>${esc(h.d.name)} ${badge(h.d.bloodType)}</td><td>${h.n}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">لا يوجد</td></tr>'}</table></div>
+  </div>`;
+}
+function drawChart() {
+  const months = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: d.toLocaleDateString('ar-EG', { month: 'short' }) }); }
+  const per = months.map(m => bloodDonations.filter(x => x.date.slice(0, 7) === m.key).reduce((a, x) => a + (+x.qty || 0), 0));
+  const max = Math.max(1, ...per);
+  const el = $('#chart');
+  if (el) el.innerHTML = months.map((m, i) => `<div class="col" title="${m.key}: ${per[i]} وحدة"><div class="bar" style="height:${Math.round(per[i] / max * 100)}%"></div><span>${m.label}</span><b>${per[i] || ''}</b></div>`).join('');
+}
+
+/* ---------- الطباعة ---------- */
+function printDoc(title, inner) {
+  const w = window.open('', '_blank', 'width=800,height=700');
+  if (!w) return toast('⚠️ اسمح بالنوافذ المنبثقة عشان تطبع', true);
+  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title>
+  <style>body{font-family:'Segoe UI',Tahoma,sans-serif;padding:26px;color:#222}
+  h1{font-size:1.2rem;margin:0 0 4px}.sub{color:#777;font-size:.85rem;margin-bottom:18px}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{padding:9px 10px;border-bottom:1px solid #eee;text-align:right}th{background:#c0392b;color:#fff}
+  .sum{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0}.box{border:1px solid #eee;border-radius:10px;padding:12px 20px;text-align:center}.box b{display:block;font-size:1.4rem;color:#c0392b}
+  .foot{margin-top:22px;text-align:center;color:#aaa;font-size:.75rem}</style></head><body>
+  <h1>🩸 ${title}</h1><div class="sub">بنك الدم — معامل صقر — ${new Date().toLocaleDateString('ar-EG')}</div>${inner}
+  <div class="foot">نظام متبرعي الدم — sakr.mtayea.com/blood.html</div>
+  <script>setTimeout(()=>print(),400)<\/script></body></html>`);
+  w.document.close();
+}
+function printCard(id) {
+  const d = bloodDonors.find(x => x.id === id); if (!d) return;
+  printDoc('كارت متبرع دم', `<table style="max-width:380px">
+    <tr><td style="color:#777">الاسم</td><td><b>${esc(d.name)}</b></td></tr>
+    <tr><td style="color:#777">الفصيلة</td><td><b style="font-size:1.3rem;color:#c0392b">${esc(d.bloodType || '—')}</b></td></tr>
+    <tr><td style="color:#777">آخر تبرع</td><td>${lastDate(d) || '—'}</td></tr>
+    <tr><td style="color:#777">عدد مرات التبرع</td><td>${donorDonations(d)}</td></tr>
+    <tr><td style="color:#777">الحالة</td><td><b>${eligible(d) ? '✅ مؤهل للتبرع' : '⛔ غير مؤهل حالياً'}</b></td></tr></table>`);
+}
+function reportModal() {
+  const div = document.createElement('div');
+  div.id = 'modal-bb';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9998;padding:16px';
+  const m = today().slice(0, 7);
+  div.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px;width:min(460px,96vw)">
+    <h3 style="margin-bottom:12px;color:#c0392b">🖨️ تقرير التبرعات</h3>
+    <div class="grid2">
+      <div class="field"><label>من</label><input class="inp" type="date" id="rp-from" value="${m}-01"></div>
+      <div class="field"><label>إلى</label><input class="inp" type="date" id="rp-to" value="${today()}"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-o btn-sm" onclick="printReport('day')">📅 اليوم</button>
+      <button class="btn btn-o btn-sm" onclick="printReport('month')">🗓️ هذا الشهر</button>
+      <button class="btn btn-o btn-sm" onclick="printReport('all')">📊 كل الفترات</button>
+      <button class="btn btn-sm" onclick="printReport('range')">🖨️ الفترة المختارة</button>
+      <button class="btn btn-o btn-sm" onclick="document.getElementById('modal-bb').remove()">إلغاء</button>
+    </div></div>`;
+  div.onclick = e => { if (e.target === div) div.remove(); };
+  document.body.appendChild(div);
+}
+function printReport(mode) {
+  const t = today();
+  let from = '0000-01-01', to = '9999-12-31', label = 'كل الفترات';
+  if (mode === 'day') { from = to = t; label = 'تقرير يوم ' + t; }
+  if (mode === 'month') { from = t.slice(0, 7) + '-01'; to = t; label = 'تقرير شهر ' + t.slice(0, 7); }
+  if (mode === 'range') { from = $('#rp-from').value || from; to = $('#rp-to').value || to; label = 'من ' + from + ' إلى ' + to; }
+  const list = [...bloodDonations].filter(x => x.date >= from && x.date <= to).sort((a, b) => a.date.localeCompare(b.date));
+  $('#modal-bb')?.remove();
+  if (!list.length) return toast('مفيش تبرعات في الفترة دي');
+  const units = list.reduce((a, x) => a + (+x.qty || 0), 0);
+  const byType = {};
+  list.forEach(x => { const d = bloodDonors.find(z => z.id === x.donorId); const tp = d ? d.bloodType : '?'; byType[tp] = (byType[tp] || 0) + (+x.qty || 0); });
+  printDoc(label, `
+    <div class="sum"><div class="box"><b>${list.length}</b>عملية</div><div class="box"><b>${units}</b>وحدة</div><div class="box"><b>${new Set(list.map(x => x.donorId)).size}</b>متبرع</div></div>
+    <table><tr><th>#</th><th>التاريخ</th><th>المتبرع</th><th>الفصيلة</th><th>الكمية</th><th>المكان</th></tr>
+    ${list.map((x, i) => { const d = bloodDonors.find(z => z.id === x.donorId);
+      return `<tr><td>${i + 1}</td><td>${esc(x.date)}</td><td>${esc(d ? d.name : 'محذوف')}</td><td>${esc(d ? d.bloodType || '—' : '—')}</td><td>${x.qty} وحدة</td><td>${esc(x.place || '—')}</td></tr>`; }).join('')}
+    </table>
+    <h3 style="margin:18px 0 8px">حسب الفصيلة</h3>
+    <table><tr><th>الفصيلة</th><th>الوحدات</th></tr>${Object.entries(byType).map(([tp, n]) => `<tr><td>${esc(tp)}</td><td>${n}</td></tr>`).join('')}</table>`);
+}
+function printNeed() {
+  const t = state.needType;
+  const list = bloodDonors.filter(d => d.bloodType === t && eligible(d)).sort((a, b) => (daysSince(a) ?? -1) - (daysSince(b) ?? -1));
+  if (!list.length) return toast('مفيش متبرعين مؤهلين للفصيلة دي');
+  printDoc('مطلوب متبرعون — فصيلة ' + t, `<table><tr><th>#</th><th>الاسم</th><th>التليفون</th><th>آخر تبرع</th></tr>
+    ${list.map((d, i) => `<tr><td>${i + 1}</td><td>${esc(d.name)}</td><td dir="ltr">${esc(d.phone || '—')}</td><td>${daysSince(d) === null ? 'لم يتبرع' : 'منذ ' + daysSince(d) + ' يوم'}</td></tr>`).join('')}</table>`);
+}
+
+/* ---------- تصدير / استيراد ---------- */
+function exportCsv(what) {
+  let rows, name;
+  if (what === 'donations') {
+    name = 'blood-donations-' + today() + '.csv';
+    rows = [['التاريخ', 'المتبرع', 'الفصيلة', 'الكمية', 'المكان', 'ملاحظات']];
+    [...bloodDonations].sort((a, b) => b.date.localeCompare(a.date)).forEach(x => { const d = bloodDonors.find(z => z.id === x.donorId); rows.push([x.date, d ? d.name : '', d ? d.bloodType : '', x.qty, x.place || '', x.notes || '']); });
+  } else {
+    name = 'blood-donors-' + today() + '.csv';
+    rows = [['الاسم', 'الرقم القومي', 'التليفون', 'الفصيلة', 'آخر تبرع', 'عدد التبرعات', 'الحالة']];
+    bloodDonors.forEach(d => rows.push([d.name, d.nationalId || '', d.phone || '', d.bloodType || '', lastDate(d), donorDonations(d), eligible(d) ? 'مؤهل' : 'غير مؤهل']));
+  }
+  const csv = '﻿' + rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  toast('📥 تم التصدير — بيفتح في Excel');
+}
+function importJson(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('ملف غير صالح');
+      let added = 0;
+      data.forEach(x => {
+        if (!x || !x.name) return;
+        const nid = (x.nationalId || '').trim();
+        if (nid && bloodDonors.find(d => d.nationalId === nid)) return;
+        bloodDonors.push({ id: uid('bd'), name: String(x.name), nationalId: nid, phone: x.phone || '', bloodType: x.bloodType || '', birthDate: x.birthDate || '', address: x.address || '', lastDonation: x.lastDonation || '', source: 'import', registeredAt: new Date().toISOString() });
+        added++;
+      });
+      save('bloodDonors');
+      render();
+      toast('📤 تم استيراد ' + added + ' متبرع');
+    } catch (err) { alert('❌ ملف غير صالح: ' + err.message); }
+  };
+  r.readAsText(f); ev.target.value = '';
+}
+
+/* ---------- الإقلاع ---------- */
+bloodDonors = localGet('bloodDonors', []);
+bloodDonations = localGet('bloodDonations', []);
+/* كلمة المرور: من إعدادات صقر المحلية (نفسها اللي بيستخدمها موقع صقر) أو الافتراضية */
+const sakrLocalSettings = (() => { try { return JSON.parse(localStorage.getItem('sakr_settings')); } catch (e) { return null; } })();
+adminCreds = Object.assign({ adminPass: 'mhmd@1993' }, sakrLocalSettings || {}, localGet('settings', {}));
+window.addEventListener('load', () => {
+  initFb();
+  /* لو الإعدادات محفوظة محلياً ولسه وصلة السحابة، اقرأ منها مؤقتاً */
+  setTimeout(() => {
+    if (!FB.connected) {
+      const s = localGet('settings', null);
+      if (s) adminCreds = s;
+    }
+    render();
+  }, 600);
+});
+</script>
+</body>
+</html>
