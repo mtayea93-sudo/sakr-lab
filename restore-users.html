@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استعادة العملاء والموظفين — معامل صقر</title>
+<style>
+  body{font-family:Tahoma,sans-serif;background:#f4f6f8;margin:0;padding:20px;direction:rtl}
+  .box{max-width:640px;margin:2rem auto;background:#fff;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+  h1{margin:0 0 6px;font-size:1.4rem;color:#0f5132}
+  p{color:#555;line-height:1.8}
+  .warn{background:#fff3cd;border:1.5px solid #ffecb5;border-radius:12px;padding:12px 14px;color:#664d03;font-weight:700;margin:14px 0}
+  input{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;font-size:1rem;box-sizing:border-box;font-family:inherit}
+  button{width:100%;padding:14px;margin-top:14px;border:none;border-radius:10px;font-size:1.05rem;font-weight:800;font-family:inherit;cursor:pointer}
+  .go{background:#0f5132;color:#fff}
+  .go:disabled{background:#9ca3af;cursor:not-allowed}
+  .log{background:#0d1b2a;color:#7CFC00;border-radius:10px;padding:14px;font-size:.85rem;min-height:60px;white-space:pre-wrap;margin-top:16px;text-align:left;direction:ltr}
+  .ok{color:#0f5132;font-weight:800}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>💾 استعادة العملاء والموظفين</h1>
+  <p>صفحة أمان لمعامل صقر: بترجّع <b id="n">12</b> حساب (موظفين + عملاء) من النسخة الاحتياطية بتاريخ <b>1 أكتوبر 2026</b>. الاستعادة <b>مدمجة</b> — أي حساب موجود مش هيتأثر، والناقص بيترجع بكلمات المرور القديمة بتاعته (أول دخول هيتحدث تشفيرها أوتوماتيك).</p>
+  <div class="warn">⚠️ للمشرف العام فقط — دخل كلمة مرور الإدارة عشان تكمل.</div>
+  <input type="password" id="pw" placeholder="كلمة مرور الإدارة">
+  <button class="go" id="btn" onclick="doRestore()">استعادة الآن ←</button>
+  <div class="log" id="log">ready.</div>
+  <p id="done" style="display:none" class="ok">✅ تمت الاستعادة! افتح الموقع الرئيسي sakr.mtayea.com وهتلاقي كل الحسابات رجعت — على كل الأجهزة.</p>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const BACKUP_USERS = [{"active":true,"addr":"دكرنس","name":"محمد طايع","pass":"mory2026","phone":"01060651837","role":"customer"},{"active":true,"addr":"دكرنس","name":"asmaa","pass":"asmaa","phone":"01013163484","role":"customer"},{"active":true,"addr":"كفر ابو ناصر","name":"احمد محمد الباز","pass":"123456","phone":"01090886002","role":"customer"},{"active":true,"addr":"ميت رومي - دكرنس","name":"مني طه علي","pass":"123456","phone":"01066.827391","role":"customer"},{"active":true,"addr":"","name":"احمد حسين","pass":"mt1","perms":["P_BOOK","P_RES","P_CHAT"],"phone":"01007253374","role":"staff"},{"active":true,"addr":"","name":"اسماء","pass":"mt2","perms":["P_BOOK","P_RES","P_CHAT"],"phone":"01018313740","role":"staff"},{"active":true,"addr":"","name":"مي","pass":"mt3","perms":["P_BOOK","P_RES","P_CHAT"],"phone":"01029959157","role":"staff"},{"active":true,"addr":"","name":"مني","pass":"mt4","perms":["P_BOOK","P_RES","P_CHAT"],"phone":"01066827391","role":"staff"},{"active":true,"addr":"دكرنس","name":"Mooaz M tayea","pass":"123456","phone":"01550834739","role":"customer"},{"active":true,"addr":"كفر عبد المؤمن","name":"عبد الرؤوف سعيد السعيد","pass":"313924426","phone":"01002737049","role":"customer"},{"active":true,"addr":"دكرنس شارع جامع المحطة","name":"Dr. Ahmed Gehad","pass":"@Ahmed@Gehad123","phone":"01068670740","role":"customer"},{"active":true,"addr":"ميت سويد","name":"محمود بدران","pass":"mb@01067664984","phone":"01067664984","role":"customer"}];
+const FIREBASE_CONFIG = {apiKey:"AIzaSyAPawpCwihRHOaPjMzhhcsSDa9WAy0Qx-Q",authDomain:"sakrlab2026.firebaseapp.com",databaseURL:"https://sakrlab2026-default-rtdb.firebaseio.com",projectId:"sakrlab2026",storageBucket:"sakrlab2026.firebasestorage.app",messagingSenderId:"1049726811378",appId:"1:1049726811378:web:0959efa43bad0f7e24e46b"};
+const $=id=>document.getElementById(id);
+function log(m){$('log').textContent += '\n' + m}
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')}
+async function doRestore(){
+  const pw=$('pw').value;
+  if(!pw)return alert('اكتب كلمة المرور الأول');
+  $('btn').disabled=true; $('btn').textContent='جارٍ الاستعادة...';
+  // التحقق من كلمة المرور زي الموقع بالظبط
+  let settings={}; try{settings=JSON.parse(localStorage.getItem('sakr_settings'))||{}}catch(e){}
+  let ok=false;
+  if(settings.adminSalt&&settings.adminPass){ ok=(await sha(settings.adminSalt+':'+pw))===settings.adminPass }
+  else if(settings.adminPass){ ok=(settings.adminPass===pw) }
+  else { ok=(pw==='mhmd@1993') }  // الافتراضي قبل أول تغيير
+  if(!ok){$('btn').disabled=false;$('btn').textContent='استعادة الآن ←';alert('كلمة المرور غلط');return}
+  // الدمج مع الموجود محليًا
+  let cur=[]; try{cur=JSON.parse(localStorage.getItem('sakr_users'))||[]}catch(e){}
+  if(!Array.isArray(cur))cur=[];
+  const map=new Map();
+  cur.forEach(u=>{if(u)map.set(u.phone,u)});
+  let added=0;
+  BACKUP_USERS.forEach(u=>{if(!map.has(u.phone)){map.set(u.phone,u);added++}});
+  const merged=Array.from(map.values());
+  const t=Date.now();
+  localStorage.setItem('sakr_users',JSON.stringify(merged));
+  localStorage.setItem('sakr_mt_users',String(t));
+  log('local merged: '+cur.length+' + '+added+' restored = '+merged.length);
+  // الرفع للسحابة
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db=firebase.database();
+    if(firebase.auth) await firebase.auth().signInAnonymously();
+    await db.ref('sakr/users').set({t:t,d:merged});
+    await db.ref('sakr/users_backup').set({t:t,d:merged});
+    log('cloud pushed ✅ users='+merged.length);
+  }catch(e){
+    log('cloud push failed: '+e.message);
+    log('البيانات اتخزنت على الجهاز ده — افتح الموقع الرئيسي منه وهيتزامن');
+  }
+  $('done').style.display='block';
+  $('btn').textContent='تم ✅';
+}
+</script>
+</body>
+</html>
