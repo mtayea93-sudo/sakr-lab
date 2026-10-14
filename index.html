@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-10-07';
+  var V = 'sakr-2026-10-13';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -16,7 +16,10 @@
     try {
       var r = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' });
       var j = await r.json();
-      if (j && j.v && j.v !== V) nukedReload();
+      if (j && j.v && j.v !== V && !sessionStorage.getItem('sakr_nuked')) {
+        try { sessionStorage.setItem('sakr_nuked', '1'); } catch (e) {}
+        nukedReload();
+      }
     } catch (e) {}
   }
   checkVersion();
@@ -343,7 +346,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a href="#prices" onclick="document.getElementById('mobileMenu').style.display='none'">قائمة الأسعار</a>
       <a href="#results" onclick="document.getElementById('mobileMenu').style.display='none'">استلام النتائج</a>
       <a href="#contact" onclick="document.getElementById('mobileMenu').style.display='none'">تواصل معنا</a>
-      <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62828;font-weight:900">📢 للشكاوى</a>
+      <a href="https://wa.me/201095756594?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" class="waComplaintBtn" style="color:#c62828;font-weight:900">📢 للشكاوى</a>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center">
       <button id="installBtn" class="btn btn-orange btn-sm" style="display:none" onclick="doInstall()">📲 حمّل التطبيق</button>
@@ -361,7 +364,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <a href="#prices" onclick="document.getElementById('mobileMenu').style.display=\'none\'">قائمة الأسعار</a>
     <a href="#results" onclick="document.getElementById('mobileMenu').style.display=\'none\'">استلام النتائج</a>
     <a href="#contact" onclick="document.getElementById('mobileMenu').style.display=\'none\'">تواصل معنا</a>
-    <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" style="color:#c62823;font-weight:900" onclick="document.getElementById('mobileMenu').style.display='none'">📢 للشكاوى</a>
+    <a href="https://wa.me/201095756594?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" class="waComplaintBtn" style="color:#c62823;font-weight:900" onclick="document.getElementById('mobileMenu').style.display='none'">📢 للشكاوى</a>
   </div>
 </nav>
 
@@ -1207,6 +1210,7 @@ function openResult(no,idx){
 function applySettings(){
   const waMsg=encodeURIComponent('أهلاً معامل صقر، عندي استفسار.');
   document.getElementById('waContactBtn').href='https://wa.me/'+normPhone(settings.wa)+'?text='+waMsg;
+  document.querySelectorAll('.waComplaintBtn').forEach(a=>{a.href='https://wa.me/'+normPhone(settings.wa)+'?text='+encodeURIComponent('أهلاً، عندي شكوى وأحب أبلغ عنها')});
 }
 </script>
 <script>
