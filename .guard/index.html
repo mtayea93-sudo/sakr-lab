@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-10-13';
+  var V = 'sakr-2026-10-14';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -346,7 +346,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a href="#prices" onclick="document.getElementById('mobileMenu').style.display='none'">قائمة الأسعار</a>
       <a href="#results" onclick="document.getElementById('mobileMenu').style.display='none'">استلام النتائج</a>
       <a href="#contact" onclick="document.getElementById('mobileMenu').style.display='none'">تواصل معنا</a>
-      <a href="https://wa.me/201095756594?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" class="waComplaintBtn" style="color:#c62828;font-weight:900">📢 للشكاوى</a>
+      <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" class="waComplaintBtn" style="color:#c62828;font-weight:900">📢 للشكاوى</a>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center">
       <button id="installBtn" class="btn btn-orange btn-sm" style="display:none" onclick="doInstall()">📲 حمّل التطبيق</button>
@@ -364,7 +364,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <a href="#prices" onclick="document.getElementById('mobileMenu').style.display=\'none\'">قائمة الأسعار</a>
     <a href="#results" onclick="document.getElementById('mobileMenu').style.display=\'none\'">استلام النتائج</a>
     <a href="#contact" onclick="document.getElementById('mobileMenu').style.display=\'none\'">تواصل معنا</a>
-    <a href="https://wa.me/201095756594?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" class="waComplaintBtn" style="color:#c62823;font-weight:900" onclick="document.getElementById('mobileMenu').style.display='none'">📢 للشكاوى</a>
+    <a href="https://wa.me/201060651837?text=أهلاً، عندي شكوى وأحب أبلغ عنها" target="_blank" class="waComplaintBtn" style="color:#c62823;font-weight:900" onclick="document.getElementById('mobileMenu').style.display='none'">📢 للشكاوى</a>
   </div>
 </nav>
 
@@ -748,7 +748,7 @@ const FB={ready:false,db:null,connected:false,loadFailed:false};
 function applyCloudData(k,v){
   if((k==='users'||k==='bookings'||k==='prices'||k==='activity'||k==='chats'||k==='devices')&&!Array.isArray(v))v=[];
   if((k==='results'||k==='settings'||k==='site'||k==='stats'||k==='notifs')&&(!v||typeof v!=='object'||Array.isArray(v)))v=(k==='stats')?{visits:0,logins:0,signups:0}:{};
-  if(k==='settings')v=Object.assign({wa:'201095756594',adminPass:'mhmd@1993'},v);
+  if(k==='settings')v=Object.assign({wa:'201065756594',adminPass:'mhmd@1993'},v);
   if(k==='site')v=Object.assign({},SITE_DEFAULT,v);
   if(k==='users')users=v;else if(k==='bookings')bookings=v;else if(k==='prices')prices=v;
   else if(k==='results')results=v;else if(k==='devices')devices=v;else if(k==='site')site=v;
@@ -881,8 +881,9 @@ let users=DBL.get('users',[]);
 let bookings=DBL.get('bookings',[]);
 let prices=DBL.get('prices',[]);
 let results=DBL.get('results',{});
-let settings=DBL.get('settings',{wa:'201095756594',adminPass:'mhmd@1993'});
-if(settings.wa==='201065756591'||settings.wa==='201060651837'){settings.wa='201095756594';DBL.set('settings',settings)}
+let settings=DBL.get('settings',{wa:'201065756594',waComplaint:'201060651837',adminPass:'mhmd@1993'});
+if(settings.wa==='201065756591'||settings.wa==='201060651837'||settings.wa==='201095756594'){settings.wa='201065756594';DBL.set('settings',settings)}
+if(!settings.waComplaint)settings.waComplaint='201060651837';
 let site=DBL.get('site',SITE_DEFAULT);
 if(DBL.get('siteVer',0)!==2){site.phones=SITE_DEFAULT.phones.slice();site.whats=SITE_DEFAULT.whats.slice();DBL.set('site',site);DBL.set('siteVer',2)}
 let devices=DBL.get('devices',DEVICES_DEFAULT);
@@ -905,7 +906,7 @@ if(!Array.isArray(activity))activity=[];
 if(!Array.isArray(chats))chats=[];
 if(!Array.isArray(devices))devices=[];
 if(!results||typeof results!=='object'||Array.isArray(results))results={};
-if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={wa:'201095756594',adminPass:'mhmd@1993'};
+if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={wa:'201065756594',waComplaint:'201060651837',adminPass:'mhmd@1993'};
 if(!site||typeof site!=='object'||Array.isArray(site))site=Object.assign({},SITE_DEFAULT);
 if(!stats||typeof stats!=='object'||Array.isArray(stats))stats={visits:0,logins:0,signups:0};
 if(!notifs||typeof notifs!=='object'||Array.isArray(notifs))notifs={};
@@ -1210,7 +1211,8 @@ function openResult(no,idx){
 function applySettings(){
   const waMsg=encodeURIComponent('أهلاً معامل صقر، عندي استفسار.');
   document.getElementById('waContactBtn').href='https://wa.me/'+normPhone(settings.wa)+'?text='+waMsg;
-  document.querySelectorAll('.waComplaintBtn').forEach(a=>{a.href='https://wa.me/'+normPhone(settings.wa)+'?text='+encodeURIComponent('أهلاً، عندي شكوى وأحب أبلغ عنها')});
+  document.querySelectorAll('.waComplaintBtn').forEach(a=>{a.href='https://wa.me/'+normPhone(settings.waComplaint||'201060651837')+'?text='+encodeURIComponent('أهلاً، عندي شكوى وأحب أبلغ عنها')});
+  const wf=document.querySelector('a[title="واتساب"]');if(wf)wf.href='https://wa.me/'+normPhone(settings.wa);
 }
 </script>
 <script>
@@ -1622,6 +1624,7 @@ function vSettings(c){
   }
   c.innerHTML='<div class="dash-card"><h3>⚙️ إعدادات الموقع — للمشرف العام فقط</h3>'+
   '<div class="field"><label>رقم واتساب المعمل الأساسي (بكود الدولة) — بيستقبل طلبات العملاء</label><input id="setWa" value="'+esc(settings.wa)+'" placeholder="2010xxxxxxxx"></div>'+
+  '<div class="field"><label>رقم واتساب الشكاوى (بكود الدولة)</label><input id="setWaComplaint" value="'+esc(settings.waComplaint||'201060651837')+'" placeholder="2010xxxxxxxx"></div>'+
   '<div class="field"><label>تغيير كلمة مرور الإدارة (المدير)</label><input id="setAdminPass" placeholder="كلمة مرور جديدة"></div>'+
   '<button class="btn btn-orange btn-sm" onclick="saveSettings()">حفظ الإعدادات</button>'+
   '<p class="hint" style="margin-top:.6rem">رقم الواتساب ده بيستقبل طلبات التسعير من الموقع.</p>'+
@@ -1629,8 +1632,9 @@ function vSettings(c){
 }
 async function saveSettings(){
   if(!isMaster())return toast('الإعدادات للمشرف العام فقط',true);
-  const wa=setWa.value.trim(),p=setAdminPass.value.trim();
+  const wa=setWa.value.trim(),wc=setWaComplaint.value.trim(),p=setAdminPass.value.trim();
   if(wa)settings.wa=normPhone(wa);
+  if(wc)settings.waComplaint=normPhone(wc);
   if(p){if(p.length<4)return toast('كلمة المرور قصيرة',true);const hp=await SEC.hashNew(p);settings.adminPass=hp.pass;settings.adminSalt=hp.salt}
   DBL.set('settings',settings);applySettings();toast('تم حفظ الإعدادات ✅');
 }
