@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-10-14';
+  var V = 'sakr-2026-10-15';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -723,6 +723,51 @@ const DBL={
     const t=Date.now();try{localStorage.setItem('sakr_'+k,JSON.stringify(v));localStorage.setItem('sakr_mt_'+k,t)}catch(e){}if(FB.ready){try{if(empty)FB.db.ref('sakr/'+k).remove();else FB.db.ref('sakr/'+k).set({t:t,d:v})}catch(e){}}
   }
 };
+/* ================= الحل النهائي ضد مسح البيانات: دمج بدل الطمس =================
+   أي كتابة على users/bookings بتندمج مع نسخة السحابة سجل بسجل (المحلي يكسب سجل بسجل)
+   فجهاز ناقص أو فاضي ميعرفش يطمس بيانات المعمل أبداً — والحذف الفعلي بيتم صراحة بالمعرّف */
+const userKey=u=>(u&&(u.id||u.phone))||('k'+Math.random());
+const bookKey=b=>(b&&(b.id||((b.userPhone||'')+'|'+(b.createdAt||''))))||('k'+Math.random());
+async function mergePush(key,localArr,idFn){
+  const clean=(Array.isArray(localArr)?localArr:[]).filter(Boolean);
+  if(!FB.ready){DBL.set(key,clean);return clean}
+  try{
+    const snap=await FB.db.ref('sakr/'+key).get();
+    const cv=snap.val();
+    let cd=[];
+    if(cv&&typeof cv==='object'&&'d'in cv&&Array.isArray(cv.d))cd=cv.d;
+    else if(Array.isArray(cv))cd=cv;
+    const map=new Map();
+    cd.forEach(x=>{if(x)map.set(idFn(x),x)});
+    clean.forEach(x=>{if(x)map.set(idFn(x),x)});
+    const merged=Array.from(map.values());
+    DBL.set(key,merged);
+    try{FB.db.ref('sakr/'+key+'_backup').set({t:Date.now(),d:merged})}catch(e){}
+    return merged;
+  }catch(e){DBL.set(key,clean);return clean}
+}
+function syncUsers(){return mergePush('users',users,userKey).then(m=>{users=m;try{applyCloudData('users',m);refreshAll()}catch(e){}})}
+function syncBookings(){return mergePush('bookings',bookings,bookKey).then(m=>{bookings=m;try{applyCloudData('bookings',m);refreshAll()}catch(e){}})}
+function cloudDeleteRec(key,k,idFn){
+  if(!FB.ready)return;
+  FB.db.ref('sakr/'+key).get().then(s=>{
+    const cv=s.val();
+    const cd=(cv&&typeof cv==='object'&&'d'in cv&&Array.isArray(cv.d))?cv.d:(Array.isArray(cv)?cv:[]);
+    const rest=cd.filter(x=>!x||idFn(x)!==k);
+    try{FB.db.ref('sakr/'+key).set({t:Date.now(),d:rest})}catch(e){}
+    try{FB.db.ref('sakr/'+key+'_backup').set({t:Date.now(),d:rest})}catch(e){}
+  }).catch(()=>{});
+}
+window.restoreFromBackup=function(){
+  if(!FB.ready){toast('Firebase مش متصل — الاستعادة مش متاحة دلوقتي',1);return}
+  if(!confirm('هيتم دمج آخر نسخة احتياطية (العملاء/الموظفين + الحجوزات) مع البيانات الحالية. متأكد؟'))return;
+  FB.db.ref('sakr/users_backup').get().then(s=>{const v=s.val();if(v&&Array.isArray(v.d)&&v.d.length)syncUsersFrom(v.d)}).catch(()=>{});
+  FB.db.ref('sakr/bookings_backup').get().then(s=>{const v=s.val();if(v&&Array.isArray(v.d)&&v.d.length)syncBookingsFrom(v.d)}).catch(()=>{});
+  toast('تم طلب الاستعادة من النسخة الاحتياطية ✅');
+};
+function syncUsersFrom(backupArr){const m=new Map();users.forEach(x=>{if(x)m.set(userKey(x),x)});backupArr.forEach(x=>{if(x)m.set(userKey(x),x)});return mergePush('users',Array.from(m.values()),userKey).then(mm=>{users=mm;try{applyCloudData('users',mm);refreshAll()}catch(e){}})}
+function syncBookingsFrom(backupArr){const m=new Map();bookings.forEach(x=>{if(x)m.set(bookKey(x),x)});backupArr.forEach(x=>{if(x)m.set(bookKey(x),x)});return mergePush('bookings',Array.from(m.values()),bookKey).then(mm=>{bookings=mm;try{applyCloudData('bookings',mm);refreshAll()}catch(e){}})}
+
 /* ================= الأمان: تشفير كلمات المرور + توقيع الجلسة =================
    كل كلمة سر بتتخزن SHA-256 + Salt فريد — والنص الصريح القديم بيترقّي تلقائياً أول دخولة.
    الجلسة موقّعة: تعديلها من كونسول المتصفح يفصلك فوراً. */
@@ -977,7 +1022,7 @@ async function doRegister(){
   const hp=await SEC.hashNew(p1);
   users.push({name,phone,addr,salt:hp.salt,pass:hp.pass,role:'customer',perms:[],active:true});
   stats.signups++;DBL.set('stats',stats);logAct('🆕 عميل جديد سجل: '+name+' ('+phone+')');
-  DBL.set('users',users);
+  syncUsers();
   session=phone;DBL.set('session',session);
   closeModal('authModal');renderAuth();toast('أهلاً بيك '+name+'! حسابك اتعمل بنجاح');
 }
@@ -985,7 +1030,7 @@ async function doLogin(){
   const u=users.find(x=>x.phone===liPhone.value.trim()&&x.active!==false);
   const v=await SEC.verify(u,liPass.value);
   if(!v.ok)return toast('رقم التليفون أو كلمة المرور غلط',true);
-  if(v.upgraded){u.salt=v.rec.salt;u.pass=v.rec.pass;DBL.set('users',users)}
+  if(v.upgraded){u.salt=v.rec.salt;u.pass=v.rec.pass;syncUsers()}
   stats.logins++;DBL.set('stats',stats);logAct('\uD83D\uDD11 '+u.name+' سجل دخول للموقع');
   session=u.phone;DBL.set('session',session);
   closeModal('authModal');renderAuth();toast('أهلاً بيك تاني يا'+u.name);
@@ -1103,7 +1148,7 @@ function submitBooking(){
   if(pf&&!bookings.some(b=>b.fileNo===pf))return toast('رقم الملف '+pf+' مش موجود — اتأكد منه أو سيبه فاضي',true);
   const hadImg=!!bkImgData;
   bookings.push({id:Date.now(),userPhone:u.phone,name:u.name,addr:u.addr,date,time,tests:tests||'(صورة روشتة مرفوعة)',notes,img:bkImgData,status:'pending',fileNo:null,patientFile:pf||null,createdAt:new Date().toLocaleString('ar-EG')});
-  DBL.set('bookings',bookings);
+  syncBookings();
   logAct('\uD83D\uDCCB طلب حجز جديد من '+u.name+' بتاريخ '+date);
   bkTests.value='';bkNotes.value='';bkTime.value='';bkDate.value='';document.getElementById('bkFile').value='';clearBkImg();
   renderMyBookings();toast('طلبك اتبعت! هنراجعه ونأكدلك على واتساب برقم ملفك');
@@ -1134,7 +1179,7 @@ async function changePass(){
   if(vo.upgraded){u.salt=vo.rec.salt;u.pass=vo.rec.pass}
   if(p1.length<4)return toast('كلمة المرور الجديدة لازم 4 أحرف على الأقل',true);
   if(p1!==p2)return toast('كلمتي المرور الجديدتين غير متطابقتين',true);
-  const hp=await SEC.hashNew(p1);u.salt=hp.salt;u.pass=hp.pass;DBL.set('users',users);
+  const hp=await SEC.hashNew(p1);u.salt=hp.salt;u.pass=hp.pass;syncUsers();
   document.getElementById('cpOld').value='';document.getElementById('cpNew').value='';document.getElementById('cpNew2').value='';
   toast('🔒 كلمة المرور اتحغيرت بنجاح — استخدمها في المرة الجاية');
 }
@@ -1272,7 +1317,7 @@ async function dashLoginStaff(){
   const u=users.find(x=>x.phone===dStaffPhone.value.trim()&&x.role==='staff'&&x.active!==false);
   const v=await SEC.verify(u,dStaffPass.value);
   if(!v.ok||!u)return toast('بيانات الموظف غلط أو الحساب موقوف',true);
-  if(v.upgraded){u.salt=v.rec.salt;u.pass=v.rec.pass;DBL.set('users',users)}
+  if(v.upgraded){u.salt=v.rec.salt;u.pass=v.rec.pass;syncUsers()}
   dashSession={type:'staff',phone:u.phone};dashSession.sig=SEC.signDash(dashSession);
   sessionStorage.setItem('sakr_dash',JSON.stringify(dashSession));
   dStaffPhone.value='';dStaffPass.value='';openAdmin();toast('أهلاً بيك يا '+u.name);
@@ -1314,6 +1359,7 @@ function vOverview(c){
   '<div class="admin-stat"><b>'+Object.keys(results).length+'</b><span>نتيجة مرفوعة</span></div></div>'+
   '<div class="dash-card"><h3>حالة الاتصال</h3><p class="hint" style="font-weight:800;font-size:.95rem">'+connStatus+'</p>'+
   '<button class="reciter-btn primary" style="margin-top:10px" onclick="restoreFromCloud()">☁️ استعادة البيانات من السحابة</button>'+
+  '<button class="reciter-btn" style="margin-top:8px;background:#065f46;color:#fff" onclick="restoreFromBackup()">💾 استعادة من آخر نسخة احتياطية</button>'+
   '<p class="hint" style="margin-top:6px">لو البيانات ظاهرة ناقصة أو قديمة على الجهاز ده — دوس الزرار ده عشان تمسح النسخة المحلية وتجيب آخر نسخة من Firebase</p></div>';
 }
 window.restoreFromCloud=function(){
@@ -1354,12 +1400,12 @@ function approveBooking(id){
   b.status='approved';b.fileNo=no;
   b.by=isMaster()?'المدير':(dashUser()?dashUser().name:'المدير');
   logAct('\u2705 اعتماد الطلب '+b.fileNo+' — '+b.name);
-  DBL.set('bookings',bookings);renderDash();
+  syncBookings();renderDash();
   pushNotif(b.userPhone,'✅ تم اعتماد طلب الزيارة بتاريخ '+b.date+' — رقم ملفك: '+b.fileNo,'#booking');
   toast('تم الاعتماد — رقم الملف: '+b.fileNo);
   setTimeout(()=>window.open(waLink(b.userPhone,'معامل صقر للتحاليل الطبية 🦅\nأهلاً '+b.name+'، تمت الموافقة على طلب الزيارة بتاريخ '+b.date+'.\nرقم ملفك: '+b.fileNo+'\nاحتفظ بالرقم ده عشان تستلم بيه نتيجتك من الموقع.\n— الموظف: '+b.by),'_blank'),900);
 }
-function delBooking(id){if(!confirm('تحذف الطلب ده نهائياً؟'))return;bookings=bookings.filter(b=>b.id!==id);DBL.set('bookings',bookings);renderDash();toast('تم حذف الطلب')}
+function delBooking(id){if(!confirm('تحذف الطلب ده نهائياً؟'))return;const gone=bookings.find(b=>b.id===id);bookings=bookings.filter(b=>b.id!==id);DBL.set('bookings',bookings);if(gone)cloudDeleteRec('bookings',bookKey(gone),bookKey);renderDash();toast('تم حذف الطلب')}
 function waNotify(phone,fileNo){
   const r=results[fileNo];
   const readyMsg=r?(r.link?'\nنتيجتك جاهزة! شوفها من هنا: '+r.link:'\nنتيجتك جاهزة! استلمها من موقعنا sakr.mtayea.com قسم "استلام النتائج" برقم ملفك'):'';
@@ -1544,7 +1590,7 @@ async function finishUserSave(n,p,pw,keepSalt,perms,keepPass){
     if(ex){ex.name=n;ex.salt=salt;ex.pass=pass;ex.role='staff';ex.perms=perms;ex.active=active;toast('ℹ️ الرقم كان حساب عميل — اتحوّل لموظف وبياناته محفوظة')}
     else users.push({name:n,phone:p,addr:'',salt,pass,role:'staff',perms,active});
   }
-  DBL.set('users',users);renderDash();toast('تم الحفظ ✅');
+  syncUsers();renderDash();toast('تم الحفظ ✅');
 }
 async function addUser(){
   const n=usName.value.trim(),p=usPhone.value.trim(),pw=usPass.value.trim();
@@ -1593,11 +1639,11 @@ function saveCust(){
   users.forEach(x=>{if(x.phone===u.phone){x.name=n;x.phone=p;x.addr=a}});
   bookings.forEach(b=>{if(b.userPhone===u.phone){b.name=n;b.userPhone=p;b.addr=a}});
   if(session===u.phone){session=p;DBL.set('session',session)}
-  DBL.set('users',users);DBL.set('bookings',bookings);
+  syncUsers();syncBookings();
   editCustIdx=-1;renderDash();renderAuth();toast('تم حفظ بيانات العميل ✅');
 }
-function toggleUser(i){users[i].active=users[i].active===false?true:false;DBL.set('users',users);renderDash();toast('تم التحديث')}
-function delUser(i){if(!confirm('تحذف '+users[i].name+' نهائياً؟'))return;users.splice(i,1);DBL.set('users',users);renderDash();toast('تم الحذف')}
+function toggleUser(i){users[i].active=users[i].active===false?true:false;syncUsers();renderDash();toast('تم التحديث')}
+function delUser(i){if(!confirm('تحذف '+users[i].name+' نهائياً؟'))return;const gone=users.splice(i,1)[0];DBL.set('users',users);cloudDeleteRec('users',userKey(gone),userKey);renderDash();toast('تم الحذف')}
 
 /* Content admin */
 const SITE_FIELDS=[['heroTag','العنوان الرئيسي في الهيرو (السطر البرتقالي)'],['heroText','النص اللي بيتكتب لوحده في الهيرو'],['servicesSub','وصف قسم خدماتنا'],['devicesSub','وصف قسم الأجهزة'],['bookingSub','وصف قسم الحجز'],['pricesSub','وصف قسم الأسعار'],['resultsSub','وصف قسم النتائج'],['contactSub','وصف قسم التواصل'],['address','العنوان'],['mapLink','لينك الخريطة (Google Maps)'],['facebook','لينك صفحة الفيسبوك'],['videoUrl','لينك فيديو المعمل (يوتيوب أو فيسبوك) — سيبه فاضي لو هترفع ملف'],['hours','مواعيد العمل (كل سطر في سطر)']];
@@ -1842,7 +1888,7 @@ function saveBookingTime(){
   const d=document.getElementById('etDate').value,t=document.getElementById('etTime').value;
   if(!d||!t)return toast('حدد التاريخ والوقت',true);
   b.date=d;b.time=t;
-  DBL.set('bookings',bookings);
+  syncBookings();
   document.getElementById('editTimeModal').style.display='none';
   renderDash();
   try{updateTimers()}catch(e){}
@@ -1852,7 +1898,7 @@ function saveBookingTime(){
 function markDone(id){
   const b=bookings.find(function(x){return x.id===id});if(!b)return;
   b.done=!b.done;
-  DBL.set('bookings',bookings);
+  syncBookings();
   updateTimers();renderDash();
   logAct(b.done?'\u2705 تم السحب: '+b.name:'\u21A9 تراجع تم السحب: '+b.name);
   toast(b.done?'تم تسجيل السحب — الإنذار اتوقف':'تم التراجع');
