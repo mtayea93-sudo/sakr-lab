@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-11-03';
+  var V = 'sakr-2026-11-04';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -60,6 +60,7 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap"></noscript>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <link rel="manifest" href="manifest.json">
@@ -866,8 +867,8 @@ function initFirebase(){
   }
   try{
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
-    if(firebase.auth){firebase.auth().signInAnonymously().then(()=>{FB.authed=true}).catch(e=>console.warn('auth:',e.code))}
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
+    window.startCloudSync=function(){
     ['users','bookings','prices','results','settings','site','devices','offers','offersViews','notifs','stats','activity','chats'].forEach(k=>{
       /* بيانات محلية قديمة (قبل نظام الطوابع): اعتبرها "معدّلة دلوقتي" عشان متتبدلش بنسخة قديمة من السحابة */
       if(!localStorage.getItem('sakr_mt_'+k))localStorage.setItem('sakr_mt_'+k,'0'); /* أول مزامنة: السحابة تكسب — عشان نسخة قديمة على جهاز ماتمسحش البيانات */
@@ -903,6 +904,8 @@ function initFirebase(){
         }
       });
     });
+    };
+    if(firebase.auth){firebase.auth().signInAnonymously().then(()=>{FB.authed=true;startCloudSync()}).catch(e=>{console.warn('auth:',e.code);FB.authed=false;startCloudSync()})}else startCloudSync();
   }catch(e){FB.ready=false}
 }
 
