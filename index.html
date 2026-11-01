@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-11-02';
+  var V = 'sakr-2026-11-03';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -342,6 +342,8 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a href="#home" onclick="document.getElementById('mobileMenu').style.display='none'">الرئيسية</a>
       <a href="#services" onclick="document.getElementById('mobileMenu').style.display='none'">خدماتنا</a>
       <a href="#devices" onclick="document.getElementById('mobileMenu').style.display='none'">أجهزتنا</a>
+    <a href="#offers" onclick="document.getElementById('mobileMenu').style.display='none'">العروض والباقات</a>
+      <a href="#offers" onclick="document.getElementById('mobileMenu').style.display='none'">العروض والباقات</a>
       <a href="#booking" onclick="document.getElementById('mobileMenu').style.display='none'">حجز زيارة منزلية</a>
       <a href="#prices" onclick="document.getElementById('mobileMenu').style.display='none'">قائمة الأسعار</a>
       <a href="#results" onclick="document.getElementById('mobileMenu').style.display='none'">استلام النتائج</a>
@@ -397,7 +399,8 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
       <a class="card" href="#booking"><div class="icon">🏠</div><h3>زيارة منزلية لسحب العينات</h3><p>سحب العينات في بيتك أو شغلك في الموعد اللي يناسبك، بدون أي انتظار.</p><span class="go">احجز الآن ←</span></a>
       <a class="card orange" href="#prices"><div class="icon">💰</div><h3>معرفة تكلفة التحاليل</h3><p>اختار تحاليلك واعرف المجموع الكلي فوراً، أو اطلب تسعيرة واتساب.</p><span class="go">اعرف التكلفة ←</span></a>
       <a class="card" href="#results"><div class="icon">📄</div><h3>استلام النتائج أونلاين</h3><p>بمجرد ما التحليل يخلص بنبعتلك لينك النتيجة على واتساب برقم ملفك.</p><span class="go">استلم نتيجتك ←</span></a>
-      <a class="card orange" href="#contact"><div class="icon">🚐</div><h3>نقل العينات بأمان</h3><p>عيناتك بتتوصل للمعمل في أسرع وقت وبأعلى معايير الجودة والسلامة.</p><span class="go">كلمنا ←</span></a>
+      <a class="card orange" href="#offers"><div class="icon">🎁</div><h3>العروض والباقات</h3><p>خصومات وباقات تحاليل مدروسة بأسعار خاصة — شوف العرض اللي يناسبك.</p><span class="go">شوف العروض ←</span></a>
+      <a class="card" href="#contact"><div class="icon">🚐</div><h3>نقل العينات بأمان</h3><p>عيناتك بتتوصل للمعمل في أسرع وقت وبأعلى معايير الجودة والسلامة.</p><span class="go">كلمنا ←</span></a>
     </div>
   </div>
 </section>
@@ -407,6 +410,14 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     <div class="sec-title"><h2>أجهزة المعمل</h2><div class="line"></div></div>
     <p class="sec-sub" data-site="devicesSub">أحدث أجهزة التحليل العالمية عشان نضمنلك أدق النتايج في أسرع وقت</p>
     <div id="devicesWrap"></div>
+  </div>
+</section>
+
+<section id="offers" style="background:#fff;padding-top:3rem">
+  <div class="container">
+    <div class="sec-title"><h2>العروض والباقات</h2><div class="line"></div></div>
+    <p class="sec-sub">أحدث عروض وباقات المعمل — اضغط على أي عرض عشان تشوفه بالتفصيل</p>
+    <div id="offersWrap"></div>
   </div>
 </section>
 
@@ -579,6 +590,12 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
   </div>
 </footer>
 
+<div class="modal" id="offerViewModal">
+  <div class="modal-box" style="max-width:640px">
+    <button class="modal-close" onclick="closeModal('offerViewModal')">✕</button>
+    <div id="offerViewBody"></div>
+  </div>
+</div>
 <div class="modal" id="authModal">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('authModal')">✕</button>
@@ -791,14 +808,15 @@ const SEC=(()=>{
 
 const FB={ready:false,db:null,connected:false,loadFailed:false};
 function applyCloudData(k,v){
-  if((k==='users'||k==='bookings'||k==='prices'||k==='activity'||k==='chats'||k==='devices')&&!Array.isArray(v))v=[];
+  if((k==='users'||k==='bookings'||k==='prices'||k==='activity'||k==='chats'||k==='devices'||k==='offers')&&!Array.isArray(v))v=[];
+  if(k==='offersViews'&&(!v||typeof v!=='object'||Array.isArray(v)))v={};
   if((k==='results'||k==='settings'||k==='site'||k==='stats'||k==='notifs')&&(!v||typeof v!=='object'||Array.isArray(v)))v=(k==='stats')?{visits:0,logins:0,signups:0}:{};
   if(k==='settings')v=Object.assign({wa:'201065756594',adminPass:'mhmd@1993'},v);
   if(k==='site')v=Object.assign({},SITE_DEFAULT,v);
   if(k==='users')users=v;else if(k==='bookings')bookings=v;else if(k==='prices')prices=v;
   else if(k==='results')results=v;else if(k==='devices')devices=v;else if(k==='site')site=v;
   else if(k==='settings')settings=v;else if(k==='chats')chats=v;else if(k==='stats')stats=v;
-  else if(k==='activity')activity=v;else if(k==='notifs'){/* الجرس بيقرا من DBL مباشرة */}
+  else if(k==='activity')activity=v;else if(k==='offers')offers=v;else if(k==='offersViews')offersViews=v;else if(k==='notifs'){/* الجرس بيقرا من DBL مباشرة */}
 }
 const RESCUE = location.search.indexOf('rescue=1') !== -1;
 /* ================= وضع الإنقاذ ================= */
@@ -850,13 +868,13 @@ function initFirebase(){
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
     if(firebase.auth){firebase.auth().signInAnonymously().then(()=>{FB.authed=true}).catch(e=>console.warn('auth:',e.code))}
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
-    ['users','bookings','prices','results','settings','site','devices','notifs','stats','activity','chats'].forEach(k=>{
+    ['users','bookings','prices','results','settings','site','devices','offers','offersViews','notifs','stats','activity','chats'].forEach(k=>{
       /* بيانات محلية قديمة (قبل نظام الطوابع): اعتبرها "معدّلة دلوقتي" عشان متتبدلش بنسخة قديمة من السحابة */
       if(!localStorage.getItem('sakr_mt_'+k))localStorage.setItem('sakr_mt_'+k,'0'); /* أول مزامنة: السحابة تكسب — عشان نسخة قديمة على جهاز ماتمسحش البيانات */
       FB.db.ref('sakr/'+k).on('value',s=>{
         const v=s.val();
         const mt=parseInt(localStorage.getItem('sakr_mt_'+k)||'0');
-        const objKeys=(k==='results'||k==='settings'||k==='site'||k==='notifs'||k==='stats');
+        const objKeys=(k==='results'||k==='settings'||k==='site'||k==='notifs'||k==='stats'||k==='offersViews');
         const def=objKeys?{}:[];
         const okT=function(x){return objKeys?(x&&typeof x==='object'&&!Array.isArray(x)):Array.isArray(x)};
         let data=null,valid=false,wrapped=false;
@@ -932,6 +950,8 @@ if(!settings.waComplaint)settings.waComplaint='201060651837';
 let site=DBL.get('site',SITE_DEFAULT);
 if(DBL.get('siteVer',0)!==2){site.phones=SITE_DEFAULT.phones.slice();site.whats=SITE_DEFAULT.whats.slice();DBL.set('site',site);DBL.set('siteVer',2)}
 let devices=DBL.get('devices',DEVICES_DEFAULT);
+let offers=DBL.get('offers',[]);
+let offersViews=DBL.get('offersViews',{});
 if(DBL.get('devVer',0)!==2){devices=JSON.parse(JSON.stringify(DEVICES_DEFAULT));DBL.set('devices',devices);DBL.set('devVer',2)}
 let session=DBL.get('session',null);
 let dashSession=(()=>{try{return JSON.parse(sessionStorage.getItem('sakr_dash'))}catch(e){return null}})();
@@ -966,7 +986,7 @@ function normPhone(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0020'))
 function waLink(phone,msg){return 'https://wa.me/'+normPhone(phone)+'?text='+encodeURIComponent(msg)}
 function compressImage(file,maxDim,q){return new Promise(res=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q))};img.src=e.target.result};r.readAsDataURL(file)})}
 function refreshAll(){if(RESCUE)return;
-  if(dashSession&&SEC.dashTampered()){dashSession=null;sessionStorage.removeItem('sakr_dash');toast('تم تسجيل خروجك لأسباب أمنية',true);closeDash();return}applySettings();renderSite();renderDevices();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}const _d=document.getElementById('dash');if(dashSession&&_d&&_d.classList.contains('open'))renderDash()}
+  if(dashSession&&SEC.dashTampered()){dashSession=null;sessionStorage.removeItem('sakr_dash');toast('تم تسجيل خروجك لأسباب أمنية',true);closeDash();return}applySettings();renderSite();renderDevices();renderOffers();renderAuth();renderPrices();renderMyBookings();if(document.getElementById('chatMsgs')){renderChat();chatFabBadge()}const _d=document.getElementById('dash');if(dashSession&&_d&&_d.classList.contains('open'))renderDash()}
 
 /* ================= Site Content ================= */
 function renderSite(){
@@ -1276,6 +1296,7 @@ const TABS=[
   {k:'results',l:'📄 رفع نتيجة',p:'P_RES'},
   {k:'prices',l:'💰 الأسعار',p:'P_PRICE'},
   {k:'devices',l:'🖥️ الأجهزة',p:'P_DEV'},
+  {k:'offers',l:'🎁 العروض والباقات',p:'P_CONTENT'},
   {k:'users',l:'👥 الموظفون',p:'P_USER'},
   {k:'customers',l:'👤 العملاء',p:'P_USER'},
   {k:'content',l:'📝 محتوى الموقع',p:'P_CONTENT'},
@@ -1335,7 +1356,7 @@ function renderDash(){
     '<button class="'+(t.k===activeTab?'active':'')+'" onclick="switchTab(\''+t.k+'\')">'+t.l+(t.k==='chats'&&unChats?' <span class="badge b-wait">'+unChats+'</span>':'')+'</button>'
   ).join('')+'<button onclick="dashLogout()" style="color:#c62828;margin-top:1rem">🚪 خروج من اللوحة</button>';
   const c=document.getElementById('dashContent');
-  const views={overview:vOverview,activity:vActivity,bookings:vBookings,chats:vChats,results:vResults,prices:vPrices,devices:vDevices,users:vUsers,customers:vCustomers,content:vContent,settings:vSettings};
+  const views={overview:vOverview,activity:vActivity,bookings:vBookings,chats:vChats,results:vResults,prices:vPrices,devices:vDevices,offers:vOffers,users:vUsers,customers:vCustomers,content:vContent,settings:vSettings};
   (views[activeTab]||vOverview)(c);
 }
 function switchTab(k){activeTab=k;renderDash()}
@@ -1547,6 +1568,102 @@ function addDevice(){
 }
 function featureDev(id){devices.forEach(d=>d.featured=(d.id===id));DBL.set('devices',devices);renderDevices();renderDash();toast('تم التمييز')}
 function delDev(id){if(!confirm('تحذف الجهاز ده؟'))return;devices=devices.filter(d=>d.id!==id);DBL.set('devices',devices);renderDevices();renderDash();toast('تم الحذف')}
+
+/* ================= العروض والباقات ================= */
+let offerMediaData=null,offerMediaType=null;
+function vOffers(c){
+  const items=offers.map(o=>{
+    const v=offersViews[o.id]||o.views||0;
+    const thumb=o.type==='video'
+      ?'<video src="'+esc(o.src)+'" preload="metadata" muted style="width:110px;height:70px;object-fit:cover;border-radius:8px;background:#000"></video>'
+      :'<img src="'+esc(o.src)+'" style="width:110px;height:70px;object-fit:cover;border-radius:8px">';
+    return '<div class="dev-admin-item">'+thumb+
+    '<div style="flex:1;min-width:180px"><b>'+esc(o.title)+'</b> '+(o.type==='video'?'<span class="badge b-wait">فيديو</span>':'<span class="badge b-ok">صورة</span>')+(o.active===false?' <span class="badge b-no">مخفي</span>':'')+
+    '<p class="hint">'+esc(o.desc||'')+(o.price?' — 💰 '+esc(o.price):'')+'</p>'+
+    '<p class="hint">👁 '+v+' مشاهدة</p></div>'+
+    '<div style="display:flex;gap:.4rem;flex-wrap:wrap">'+
+    '<button class="btn btn-ghost btn-sm" onclick="toggleOffer('+o.id+')">'+(o.active===false?'إظهار':'إخفاء')+'</button>'+
+    '<button class="btn btn-danger btn-sm" onclick="delOffer('+o.id+')">حذف</button></div></div>'}).join('');
+  c.innerHTML='<div class="dash-card"><h3>➕ إضافة عرض أو باقة</h3>'+
+  '<div class="grid2"><div class="field"><label>اسم العرض / الباقة</label><input id="ofTitle" placeholder="مثال: باقة الزيارة المنزلية الشاملة"></div>'+
+  '<div class="field"><label>السعر (اختياري)</label><input id="ofPrice" placeholder="مثال: 350 جنيه بدل 500"></div></div>'+
+  '<div class="field"><label>وصف مختصر (اختياري)</label><textarea id="ofDesc" rows="2"></textarea></div>'+
+  '<div class="field"><label>الفيديو أو الصورة</label><div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
+  '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 من الملفات<input type="file" accept="video/*,image/*" hidden onchange="handleOfferMedia(this)"></label>'+
+  '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📷 بالكاميرا<input type="file" accept="video/*,image/*" capture="environment" hidden onchange="handleOfferMedia(this)"></label></div>'+
+  '<div id="offerMediaPrev" style="margin-top:.5rem"></div></div>'+
+  '<button class="btn btn-orange btn-sm" onclick="saveOffer()">نشر العرض</button></div>'+
+  '<div class="dash-card"><h3>العروض الحالية ('+offers.length+')</h3>'+(items||'<p class="hint">لسه مفيش عروض متضافة</p>')+'</div>';
+}
+function handleOfferMedia(inp){
+  const f=inp.files[0];if(!f)return;
+  if(f.size>30*1024*1024){toast('الملف أكبر من 30 ميجا — قلل الجودة أو قصّر الفيديو وحاول تاني',true);inp.value='';return}
+  const r=new FileReader();
+  r.onload=e=>{
+    offerMediaData=e.target.result;
+    offerMediaType=f.type.startsWith('video')?'video':'image';
+    const pv=document.getElementById('offerMediaPrev');
+    if(pv)pv.innerHTML=(offerMediaType==='video'
+      ?'<video src="'+offerMediaData+'" controls muted style="max-width:220px;border-radius:10px;border:2px solid var(--blue)"></video>'
+      :'<img src="'+offerMediaData+'" style="max-width:220px;border-radius:10px;border:2px solid var(--blue)">')+
+      '<p class="hint" style="margin-top:4px">تم اختيار: '+esc(f.name)+' ('+Math.round(f.size/1024/1024*10)/10+' ميجا)</p>';
+  };
+  r.readAsDataURL(f);
+}
+function saveOffer(){
+  const t=ofTitle.value.trim(),d=ofDesc.value.trim(),pr=ofPrice.value.trim();
+  if(!t)return toast('اكتب اسم العرض الأول',true);
+  if(!offerMediaData)return toast('ارفع فيديو أو صورة للعرض',true);
+  offers.unshift({id:Date.now(),title:t,desc:d,price:pr,type:offerMediaType,src:offerMediaData,views:0,active:true,createdAt:new Date().toLocaleString('ar-EG')});
+  DBL.set('offers',offers);
+  offerMediaData=null;offerMediaType=null;
+  renderOffers();renderDash();toast('العرض اتنشر ✅');
+}
+function toggleOffer(id){const o=offers.find(x=>x.id===id);if(!o)return;o.active=o.active===false?true:false;DBL.set('offers',offers);renderOffers();renderDash();toast(o.active?'العرض ظاهر للعملاء':'العرض اتخفي')}
+function delOffer(id){if(!confirm('تحذف العرض ده نهائياً؟'))return;offers=offers.filter(o=>o.id!==id);DBL.set('offers',offers);renderOffers();renderDash();toast('تم الحذف')}
+/* عرض العروض للعملاء + عداد المشاهدات */
+function renderOffers(){
+  const wrap=document.getElementById('offersWrap');if(!wrap)return;
+  const list=(offers||[]).filter(o=>o.active!==false);
+  if(!list.length){wrap.innerHTML='<p class="hint" style="text-align:center">قريباً — تابعنا لأحدث العروض والباقات.</p>';return}
+  wrap.innerHTML='<div class="dev-grid">'+list.map(o=>{
+    const v=(offersViews&&offersViews[o.id])||o.views||0;
+    const media=o.type==='video'
+      ?'<div style="position:relative"><video src="'+esc(o.src)+'" preload="metadata" muted playsinline style="width:100%;height:200px;object-fit:cover;border-radius:14px 14px 0 0;background:#000"></video><span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.65);color:#fff;border-radius:8px;padding:2px 10px;font-size:.75rem;font-weight:800">▶ فيديو</span></div>'
+      :'<img src="'+esc(o.src)+'" alt="'+esc(o.title)+'" style="width:100%;height:200px;object-fit:cover;border-radius:14px 14px 0 0">';
+    return '<div class="dev-card reveal visible" style="cursor:pointer" onclick="openOffer('+o.id+')">'+media+
+    '<div class="dev-body"><h4>'+esc(o.title)+'</h4><p>'+esc(o.desc||'')+'</p>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;flex-wrap:wrap;gap:.4rem">'+
+    (o.price?'<span class="badge b-ok" style="font-size:.9rem">'+esc(o.price)+'</span>':'<span></span>')+
+    '<span class="hint">👁 '+v+' مشاهدة</span></div></div></div>'
+  }).join('')+'</div>';
+}
+function openOffer(id){
+  const o=(offers||[]).find(x=>x.id===id);if(!o)return;
+  countOfferView(id);
+  const v=(offersViews&&offersViews[o.id])||0;
+  const media=o.type==='video'
+    ?'<video src="'+esc(o.src)+'" controls autoplay playsinline style="width:100%;max-height:60vh;border-radius:12px;background:#000"></video>'
+    :'<img src="'+esc(o.src)+'" style="width:100%;border-radius:12px">';
+  const body=document.getElementById('offerViewBody');
+  body.innerHTML=media+
+   '<h3 style="margin:.9rem 0 .3rem">'+esc(o.title)+'</h3>'+
+   '<p class="hint" style="font-size:.95rem">'+esc(o.desc||'')+'</p>'+
+   '<div style="display:flex;gap:.7rem;align-items:center;flex-wrap:wrap;margin-top:.7rem">'+
+   (o.price?'<span class="badge b-ok" style="font-size:1rem">'+esc(o.price)+'</span>':'')+
+   '<span class="hint">👁 '+v+' مشاهدة</span>'+
+   '<a class="btn btn-orange btn-sm" target="_blank" rel="noopener" href="'+waLink(settings.wa,'السلام عليكم، عايز أستفسر عن عرض: '+o.title)+'">استفسر واتساب 💬</a></div>';
+  openModal('offerViewModal');
+}
+function countOfferView(id){
+  try{
+    offersViews=offersViews||{};
+    offersViews[id]=(offersViews[id]||0)+1;
+    localStorage.setItem('sakr_offersViews',JSON.stringify(offersViews));
+    if(FB.ready&&FB.db){try{FB.db.ref('sakr/offersViews/'+id).transaction(v=>(v||0)+1)}catch(e){}}
+    renderOffers();
+  }catch(e){}
+}
 
 /* Users admin */
 let editUserIdx=-1;
