@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-11-04';
+  var V = 'sakr-2026-11-09';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -1573,7 +1573,7 @@ function featureDev(id){devices.forEach(d=>d.featured=(d.id===id));DBL.set('devi
 function delDev(id){if(!confirm('تحذف الجهاز ده؟'))return;devices=devices.filter(d=>d.id!==id);DBL.set('devices',devices);renderDevices();renderDash();toast('تم الحذف')}
 
 /* ================= العروض والباقات ================= */
-let offerMediaData=null,offerMediaType=null;
+let offerMediaData=null,offerMediaType=null,offerImgs=[];
 function vOffers(c){
   const items=offers.map(o=>{
     const v=offersViews[o.id]||o.views||0;
@@ -1581,7 +1581,7 @@ function vOffers(c){
       ?'<video src="'+esc(o.src)+'" preload="metadata" muted style="width:110px;height:70px;object-fit:cover;border-radius:8px;background:#000"></video>'
       :'<img src="'+esc(o.src)+'" style="width:110px;height:70px;object-fit:cover;border-radius:8px">';
     return '<div class="dev-admin-item">'+thumb+
-    '<div style="flex:1;min-width:180px"><b>'+esc(o.title)+'</b> '+(o.type==='video'?'<span class="badge b-wait">فيديو</span>':'<span class="badge b-ok">صورة</span>')+(o.active===false?' <span class="badge b-no">مخفي</span>':'')+
+    '<div style="flex:1;min-width:180px"><b>'+esc(o.title)+'</b> '+(o.type==='video'?'<span class="badge b-wait">فيديو</span>':'<span class="badge b-ok">صورة</span>')+((o.imgs&&o.imgs.length)?' <span class="badge b-wait">🖼 '+(o.imgs.length+1)+' صور</span>':'')+(o.active===false?' <span class="badge b-no">مخفي</span>':'')+
     '<p class="hint">'+esc(o.desc||'')+(o.price?' — 💰 '+esc(o.price):'')+'</p>'+
     '<p class="hint">👁 '+v+' مشاهدة</p></div>'+
     '<div style="display:flex;gap:.4rem;flex-wrap:wrap">'+
@@ -1591,35 +1591,57 @@ function vOffers(c){
   '<div class="grid2"><div class="field"><label>اسم العرض / الباقة</label><input id="ofTitle" placeholder="مثال: باقة الزيارة المنزلية الشاملة"></div>'+
   '<div class="field"><label>السعر (اختياري)</label><input id="ofPrice" placeholder="مثال: 350 جنيه بدل 500"></div></div>'+
   '<div class="field"><label>وصف مختصر (اختياري)</label><textarea id="ofDesc" rows="2"></textarea></div>'+
-  '<div class="field"><label>الفيديو أو الصورة</label><div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
-  '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 من الملفات<input type="file" accept="video/*,image/*" hidden onchange="handleOfferMedia(this)"></label>'+
+  '<div class="field"><label>الصور أو الفيديو — ممكن تختار أكتر من صورة في المرة الواحدة</label><div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
+  '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 من الملفات<input type="file" accept="image/*" multiple hidden onchange="handleOfferMedia(this)"></label>'+
   '<label class="btn btn-ghost btn-sm" style="cursor:pointer">📷 بالكاميرا<input type="file" accept="video/*,image/*" capture="environment" hidden onchange="handleOfferMedia(this)"></label></div>'+
   '<div id="offerMediaPrev" style="margin-top:.5rem"></div></div>'+
   '<button class="btn btn-orange btn-sm" onclick="saveOffer()">نشر العرض</button></div>'+
   '<div class="dash-card"><h3>العروض الحالية ('+offers.length+')</h3>'+(items||'<p class="hint">لسه مفيش عروض متضافة</p>')+'</div>';
 }
+/* رفع العرض: فيديو واحد أو صور متعددة (متضغطة) — الأولى أساسية والباقي جالري */
 function handleOfferMedia(inp){
-  const f=inp.files[0];if(!f)return;
-  if(f.size>30*1024*1024){toast('الملف أكبر من 30 ميجا — قلل الجودة أو قصّر الفيديو وحاول تاني',true);inp.value='';return}
-  const r=new FileReader();
-  r.onload=e=>{
-    offerMediaData=e.target.result;
-    offerMediaType=f.type.startsWith('video')?'video':'image';
+  const files=[...(inp.files||[])];if(!files.length)return;
+  if(files[0].type.startsWith('video')){
+    const f=files[0];
+    if(f.size>30*1024*1024){toast('الملف أكبر من 30 ميجا — قلل الجودة أو قصّر الفيديو وحاول تاني',true);inp.value='';return}
+    const r=new FileReader();
+    r.onload=e=>{
+      offerMediaData=e.target.result;offerMediaType='video';offerImgs=[];
+      const pv=document.getElementById('offerMediaPrev');
+      if(pv)pv.innerHTML='<video src="'+offerMediaData+'" controls muted style="max-width:220px;border-radius:10px;border:2px solid var(--blue)"></video>'+
+      '<p class="hint" style="margin-top:4px">تم اختيار فيديو: '+esc(f.name)+' ('+Math.round(f.size/1024/1024*10)/10+' ميجا) — الفيديو بيكون لوحده من غير صور إضافية</p>';
+    };
+    r.readAsDataURL(f);inp.value='';return;
+  }
+  (async()=>{
+    const pics=[];
+    for(const f of files.slice(0,8)){
+      if(!f.type.startsWith('image'))continue;
+      try{const d=await compressImage(f,1200,0.82);pics.push({data:d,name:f.name});}catch(e){}
+    }
+    inp.value='';
+    if(!pics.length)return toast('اختار صور أو فيديو',true);
+    offerMediaData=pics[0].data;offerMediaType='image';
+    offerImgs=pics.slice(1).map(p=>p.data);
     const pv=document.getElementById('offerMediaPrev');
-    if(pv)pv.innerHTML=(offerMediaType==='video'
-      ?'<video src="'+offerMediaData+'" controls muted style="max-width:220px;border-radius:10px;border:2px solid var(--blue)"></video>'
-      :'<img src="'+offerMediaData+'" style="max-width:220px;border-radius:10px;border:2px solid var(--blue)">')+
-      '<p class="hint" style="margin-top:4px">تم اختيار: '+esc(f.name)+' ('+Math.round(f.size/1024/1024*10)/10+' ميجا)</p>';
-  };
-  r.readAsDataURL(f);
+    if(pv)pv.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+      pics.map((p,i)=>'<img src="'+p.data+'" style="width:74px;height:74px;object-fit:cover;border-radius:8px;border:2px solid '+(i===0?'var(--blue)':'#ccc')+'">').join('')+
+      '</div><p class="hint" style="margin-top:4px">✅ '+pics.length+' صورة جاهزة — الأولى هي صورة العرض الأساسية'+(pics.length>1?' والباقي هيبقى جالري جوه العرض':'')+'</p>';
+  })();
 }
+/* جالري صور العرض للعميل */
+function galGo(i){window.__galIdx=i;galShow()}
+function galNav(d){const n=(window.__galImgs||[]).length;if(!n)return;window.__galIdx=(window.__galIdx+d+n)%n;galShow()}
+function galShow(){const m=document.getElementById('galMain');if(m&&window.__galImgs)m.src=window.__galImgs[window.__galIdx];const c=document.getElementById('galCount');if(c)c.textContent=(window.__galIdx+1)+' / '+window.__galImgs.length;}
 function saveOffer(){
   const t=ofTitle.value.trim(),d=ofDesc.value.trim(),pr=ofPrice.value.trim();
   if(!t)return toast('اكتب اسم العرض الأول',true);
   if(!offerMediaData)return toast('ارفع فيديو أو صورة للعرض',true);
-  offers.unshift({id:Date.now(),title:t,desc:d,price:pr,type:offerMediaType,src:offerMediaData,views:0,active:true,createdAt:new Date().toLocaleString('ar-EG')});
+  const fresh={id:Date.now(),title:t,desc:d,price:pr,type:offerMediaType,src:offerMediaData,views:0,active:true,createdAt:new Date().toLocaleString('ar-EG')};
+  if(offerMediaType==='image'&&offerImgs.length)fresh.imgs=offerImgs.slice();
+  offers.unshift(fresh);
   DBL.set('offers',offers);
-  offerMediaData=null;offerMediaType=null;
+  offerMediaData=null;offerMediaType=null;offerImgs=[];
   renderOffers();renderDash();toast('العرض اتنشر ✅');
 }
 function toggleOffer(id){const o=offers.find(x=>x.id===id);if(!o)return;o.active=o.active===false?true:false;DBL.set('offers',offers);renderOffers();renderDash();toast(o.active?'العرض ظاهر للعملاء':'العرض اتخفي')}
@@ -1645,9 +1667,20 @@ function openOffer(id){
   const o=(offers||[]).find(x=>x.id===id);if(!o)return;
   countOfferView(id);
   const v=(offersViews&&offersViews[o.id])||0;
-  const media=o.type==='video'
-    ?'<video src="'+esc(o.src)+'" controls autoplay playsinline style="width:100%;max-height:60vh;border-radius:12px;background:#000"></video>'
-    :'<img src="'+esc(o.src)+'" style="width:100%;border-radius:12px">';
+  let media;
+  if(o.type==='video'){
+    media='<video src="'+esc(o.src)+'" controls autoplay playsinline style="width:100%;max-height:60vh;border-radius:12px;background:#000"></video>';
+  } else if(o.imgs&&o.imgs.length){
+    window.__galImgs=[o.src].concat(o.imgs);window.__galIdx=0;
+    media='<div style="position:relative"><img id="galMain" src="'+esc(o.src)+'" style="width:100%;border-radius:12px">'+
+    '<button onclick="galNav(1)" style="position:absolute;top:44%;right:8px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:20px;cursor:pointer">‹</button>'+
+    '<button onclick="galNav(-1)" style="position:absolute;top:44%;left:8px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:20px;cursor:pointer">›</button>'+
+    '<span style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:2px 10px;font-size:.78rem;font-weight:800" id="galCount">1 / '+(o.imgs.length+1)+'</span></div>'+
+    '<div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:4px">'+
+    window.__galImgs.map((s,i)=>'<img src="'+esc(s)+'" onclick="galGo('+i+')" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:2px solid '+(i===0?'var(--orange,#f59e0b)':'#ddd')+';cursor:pointer;flex:0 0 auto">').join('')+'</div>';
+  } else {
+    media='<img src="'+esc(o.src)+'" style="width:100%;border-radius:12px">';
+  }
   const body=document.getElementById('offerViewBody');
   body.innerHTML=media+
    '<h3 style="margin:.9rem 0 .3rem">'+esc(o.title)+'</h3>'+
