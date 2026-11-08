@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-11-09';
+  var V = 'sakr-2026-11-09b';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -584,7 +584,7 @@ setTimeout(function(){document.querySelectorAll('.reveal:not(.visible)').forEach
     </div>
     <div class="signature">
       <div class="sig-social">
-        <a href="https://www.facebook.com/share/1JmeK44dx1/" target="_blank" title="فيسبوك">فيسبوك</a><span class="dot">✦</span><a href="https://wa.me/201095756594" target="_blank" title="واتساب">واتساب</a>
+        <a href="https://www.facebook.com/share/1JmeK44dx1/" target="_blank" title="فيسبوك">فيسبوك</a><span class="dot">✦</span><a href="https://wa.me/201065756594" target="_blank" title="واتساب">واتساب</a>
       </div>
       <div class="sig-badge">👌 صنع بواسطة <b>m_tayea</b> <span class="handle">@m_tayea</span></div>
     </div>
@@ -919,7 +919,7 @@ const SITE_DEFAULT={
   resultsSub:'أدخل رقم الملف اللي وصلك على واتساب لما المعمل وافق على طلبك',
   contactSub:'إحنا في خدمتك على مدار الساعة',
   phones:['01040271091','0503460042','01060651837'],
-  whats:['01040271091','01060651837'],
+  whats:['01065756594','01060651837'],
   address:'دكرنس - شارع المستشفى',
   mapLink:'https://maps.app.goo.gl/ScBHP8Pa4YstrwXn9?g_st=ac',
   facebook:'https://www.facebook.com/drsakrlab?mibextid=ZbWKwL',
@@ -951,7 +951,7 @@ let settings=DBL.get('settings',{wa:'201065756594',waComplaint:'201060651837',ad
 if(settings.wa==='201065756591'||settings.wa==='201060651837'||settings.wa==='201095756594'){settings.wa='201065756594';DBL.set('settings',settings)}
 if(!settings.waComplaint)settings.waComplaint='201060651837';
 let site=DBL.get('site',SITE_DEFAULT);
-if(DBL.get('siteVer',0)!==2){site.phones=SITE_DEFAULT.phones.slice();site.whats=SITE_DEFAULT.whats.slice();DBL.set('site',site);DBL.set('siteVer',2)}
+if(DBL.get('siteVer',0)!==3){site.phones=SITE_DEFAULT.phones.slice();site.whats=SITE_DEFAULT.whats.slice();DBL.set('site',site);DBL.set('siteVer',3)}
 let devices=DBL.get('devices',DEVICES_DEFAULT);
 let offers=DBL.get('offers',[]);
 let offersViews=DBL.get('offersViews',{});
