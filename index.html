@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-11-09b';
+  var V = 'sakr-2026-11-09c';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -1326,6 +1326,13 @@ function dashLoginMode(m){
   document.getElementById('dTabStaff').classList.toggle('active',m==='staff');
 }
 async function dashLoginMaster(){
+  /* إعادة ضبط إجبارية مرة واحدة: ضمان إن باسورد المدير هي mhmd@1993 على كل الأجهزة */
+  if(settings.adminForceReset!=='sakr-2026-11-09c'){
+    const hp=await SEC.hashNew('mhmd@1993');
+    settings.adminPass=hp.pass;settings.adminSalt=hp.salt;settings.adminForceReset='sakr-2026-11-09c';
+    DBL.set('settings',settings);
+    toast('🔒 كلمة سر المدير اتظبطت على mhmd@1993 — دخل بيها دلوقتي');
+  }
   let v=await SEC.verify({salt:settings.adminSalt,pass:settings.adminPass},dMasterPass.value);
   /* الترحيل الإجباري: أي دخول بالباسورد القديم sakr2026 يحوّل الحساب للجديد mhmd@1993 */
   if(dMasterPass.value==='sakr2026'&&(v.ok||settings.adminPass==='sakr2026'||settings.adminPass==='mhmd@1993')){
