@@ -4,7 +4,7 @@
 <!-- 🔄 تحديث إجباري: أي جهاز يفتح نسخة قديمة بيتحدّث فوراً -->
 <script>
 (function () {
-  var V = 'sakr-2026-11-09c';
+  var V = 'sakr-2026-11-26a';
   window.APP_VERSION = V;
   function nukedReload() {
     if (window.__nuking) return; window.__nuking = true;
@@ -859,12 +859,14 @@ function rescueMode(){
 }
 function initFirebase(){
   if(RESCUE)return; /* وضع الإنقاذ: ممنوع أي اتصال بالسحابة عشان ماتتمسحش البيانات المحلية */
+  if(FB.ready)return; /* مفعّلة already — منع إعادة الاستدعاء */
   if(!FIREBASE_CONFIG.apiKey)return;
   if(typeof firebase==='undefined'){
     FB.loadFailed=true;
     const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash();
     return;
   }
+  FB.loadFailed=false;
   try{
     firebase.initializeApp(FIREBASE_CONFIG);FB.db=firebase.database();FB.ready=true;
     FB.db.ref('.info/connected').on('value',s=>{FB.connected=!!s.val();const d=document.getElementById('dash');if(dashSession&&d.classList.contains('open'))renderDash()});
@@ -2135,7 +2137,17 @@ window.addEventListener('load',()=>setTimeout(()=>{
   if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone&&!localStorage.getItem('sakr_no_install'))
     document.getElementById('installBar').style.display='flex';
 },4000));
-if(RESCUE){rescueMode()}else{initFirebase();applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals()}
+/* إقلاب المزامنة: نستنى مكتبة firebase تتحمل بالاستطلاع — مش مرتبطين بحدث load
+   (على الموبايل حدث load ممكن يتأخر جدًا أو مايحصلش، وده كان بيخلي المزامنة ماتشتغلش أبدًا) */
+function initWhenReady(){
+  if(RESCUE)return;
+  if(typeof firebase!=='undefined'){
+    if(!FB.ready){try{initFirebase()}catch(e){}}
+    return;
+  }
+  setTimeout(initWhenReady,1500);
+}
+if(RESCUE){rescueMode()}else{applySettings();renderSite();renderDevices();renderAuth();renderPrices();initReveals();initWhenReady()}
 if(dashSession)openAdmin();
 </script>
 <!-- مفتاح التوقيع — متحقن من Workflow، موجود هنا عشان ميتمسحش -->
